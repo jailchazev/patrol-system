@@ -5,8 +5,17 @@
   "display": "standalone",
   "background_color": "#0a1224",
   "theme_color": "#0a1224",
+  "description": "Registro de evidencia operativa de patrullas",
   "icons": [
-    { "src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2921/2921226.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2921/2921226.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
   ]
 }
