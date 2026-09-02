@@ -93,23 +93,23 @@ def generate_evidence_pdf(evidences, title="EVIDENCIA DE PATRULLAS"):
                     continue
             
             if photo_data:
-    # Si hay 2 fotos, ponerlas lado a lado con espacio
-    if len(photo_data) == 2:
-        photo_table = Table([photo_data], colWidths=[75*mm, 75*mm])
-        photo_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 0),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ]))
-        current_page_evidences.append(photo_table)
-        # Espacio de 1 cm después de las fotos
-        current_page_evidences.append(Spacer(1, 10*mm))
-    else:
-        # Si hay 1 sola foto, centrarla
-        for img in photo_data:
-            current_page_evidences.append(img)
-            current_page_evidences.append(Spacer(1, 10*mm))
+                # Si hay 2 fotos, ponerlas lado a lado con espacio
+                if len(photo_data) == 2:
+                    photo_table = Table([photo_data], colWidths=[75*mm, 75*mm])
+                    photo_table.setStyle(TableStyle([
+                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                    ]))
+                    current_page_evidences.append(photo_table)
+                    # Espacio de 1 cm después de las fotos
+                    current_page_evidences.append(Spacer(1, 10*mm))
+                else:
+                    # Si hay 1 sola foto, centrarla
+                    for img in photo_data:
+                        current_page_evidences.append(img)
+                        current_page_evidences.append(Spacer(1, 10*mm))
         
         if (idx + 1) % evidences_per_page == 0 or idx == len(evidences) - 1:
             story.extend(current_page_evidences)
@@ -139,8 +139,6 @@ def generate_evidence_pdf(evidences, title="EVIDENCIA DE PATRULLAS"):
         
         canvas.setFont('Helvetica', 8)
         canvas.drawRightString(A4[0] - 15*mm, header_y + 4*mm, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}")
-        
-        # ✅ CORRECCIÓN: Usar solo doc.page (pageCount no existe durante el renderizado)
         canvas.drawRightString(A4[0] - 15*mm, header_y, f"Página {doc.page}")
         
         canvas.line(15*mm, header_y - 2*mm, A4[0] - 15*mm, header_y - 2*mm)
