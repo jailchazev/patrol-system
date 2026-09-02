@@ -77,14 +77,21 @@
                     <label>Código *</label>
                     <input type="text" id="fCode" required class="input" style="text-transform:uppercase">
                 </div>
-                <div class="form-group">
-                    <label>Rol *</label>
-                    <select id="fRole" required class="input">
-                        <option value="guardia">Guardia</option>
-                        <option value="supervisor">Supervisor</option>
-                        <option value="admin">Administrador</option>
-                    </select>
-                </div>
+<div class="form-group">
+    <label>Rol *</label>
+    <input type="text" id="fRole" list="rolesList" required class="input" 
+           placeholder="Selecciona o escribe un nuevo rol">
+    <datalist id="rolesList">
+        <option value="guardia">
+        <option value="supervisor">
+        <option value="admin">
+        <option value="jefe_de_turno">
+        <option value="coordinador">
+    </datalist>
+    <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+        💡 Escribe un rol personalizado o selecciona uno existente
+    </small>
+</div>
             </div>
             <div class="form-group">
                 <label>Nombre completo *</label>
