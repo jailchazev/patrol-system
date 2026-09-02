@@ -86,35 +86,28 @@ def generate_evidence_pdf(evidences, title="EVIDENCIA DE PATRULLAS"):
                         photo_base64 = photo_base64.split(',')[1]
                     photo_bytes = base64.b64decode(photo_base64)
                     photo_buffer = BytesIO(photo_bytes)
-                    img = Image(photo_buffer, width=75*mm, height=50*mm)
+                    img = Image(photo_buffer, width=70*mm, height=47*mm)
                     photo_data.append(img)
                 except Exception as e:
                     print(f"Error procesando foto: {e}")
                     continue
             
             if photo_data:
-    # Si hay 2 fotos, ponerlas lado a lado con espacio de 1cm entre ellas
-    if len(photo_data) == 2:
-        # Crear tabla con espacio entre columnas (1cm = 10mm)
-        photo_table = Table([photo_data], colWidths=[75*mm, 75*mm])
-        photo_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 0),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-            ('TOPPADDING', (0, 0), (-1, -1), 0),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-            # Espacio de 1cm entre columnas
-            ('COLSPACING', (0, 0), (1, 0), 10*mm),
-        ]))
-        current_page_evidences.append(photo_table)
-        # Espacio después del reporte completo
-        current_page_evidences.append(Spacer(1, 5*mm))
-    else:
-        # Si hay 1 sola foto
-        for img in photo_data:
-            current_page_evidences.append(img)
-        current_page_evidences.append(Spacer(1, 5*mm))
+                # TÉCNICA INFALIBLE: Tabla de 3 columnas para separación exacta de 1cm
+                if len(photo_data) == 2:
+                    spacer_column = Spacer(10*mm, 47*mm)  # 10mm = 1cm de separación
+                    photo_table = Table([[photo_data[0], spacer_column, photo_data[1]]])
+                    photo_table.setStyle(TableStyle([
+                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ]))
+                    current_page_evidences.append(photo_table)
+                else:
+                    # Si hay 1 sola foto
+                    current_page_evidences.append(photo_data[0])
+                
+                # Espacio después de las fotos antes del siguiente reporte
+                current_page_evidences.append(Spacer(1, 5*mm))
         
         if (idx + 1) % evidences_per_page == 0 or idx == len(evidences) - 1:
             story.extend(current_page_evidences)
