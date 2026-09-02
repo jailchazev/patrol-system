@@ -434,31 +434,164 @@ textarea.input { resize: vertical; min-height: 80px; }
 
 /* ============ PRINT / PDF ============ */
 @media print {
-    @page { size: A4; margin: 15mm; }
-    body { background: white !important; color: black !important; }
+    @page { 
+        size: A4; 
+        margin: 10mm; 
+    }
+    
+    body { 
+        background: white !important; 
+        color: black !important; 
+        font-size: 11px;
+    }
+    
+    /* Ocultar elementos de navegación */
     .sidebar, .topbar, .menu-toggle, .filters-bar, .card-header button,
     #formSection, .evidence-actions, .toast-container, .stats-grid,
-    .page-header button { display: none !important; }
-    .main-wrapper { margin-left: 0 !important; }
-    .content { padding: 0 !important; }
-    .card { background: white !important; border: none !important; box-shadow: none !important; }
-    .card-header { border-bottom: 2px solid #000 !important; }
-    .card-header h3 { color: black !important; font-size: 18px !important; }
-    .evidence-list { display: block !important; }
+    .page-header button, .action-btns, .icon-btn { 
+        display: none !important; 
+    }
+    
+    .main-wrapper { 
+        margin-left: 0 !important; 
+    }
+    
+    .content { 
+        padding: 0 !important; 
+    }
+    
+    .card { 
+        background: white !important; 
+        border: none !important; 
+        box-shadow: none !important; 
+        page-break-inside: avoid;
+    }
+    
+    .card-header { 
+        border-bottom: 2px solid #000 !important; 
+        padding: 5mm 0 !important;
+        margin-bottom: 5mm !important;
+    }
+    
+    .card-header h3 { 
+        color: black !important; 
+        font-size: 16px !important;
+        text-align: center;
+        text-transform: uppercase;
+    }
+    
+    /* Título principal */
+    .print-title { 
+        display: block !important; 
+        text-align: center; 
+        font-size: 18px; 
+        font-weight: 700; 
+        margin-bottom: 8mm !important;
+        text-transform: uppercase;
+        border-bottom: 3px solid #000;
+        padding-bottom: 3mm;
+    }
+    
+    /* Lista de evidencias - GRID para 3 por página */
+    .evidence-list { 
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 4mm !important;
+        margin-top: 0 !important;
+    }
+    
+    /* Cada tarjeta de evidencia */
     .evidence-card {
         background: white !important;
         border: 1px solid #ccc !important;
+        border-radius: 4px !important;
         color: black !important;
+        padding: 3mm !important;
+        margin-bottom: 0 !important;
         page-break-inside: avoid;
-        margin-bottom: 10mm;
-        height: 120mm;
-        overflow: hidden;
+        break-inside: avoid;
+        height: auto !important;
+        max-height: 85mm !important; /* Altura máxima para que quepan 3 */
+        overflow: hidden !important;
+        box-sizing: border-box !important;
     }
-    .evidence-card:nth-child(2n+3) { page-break-before: always; }
-    .evidence-text { color: black !important; font-size: 12px !important; }
-    .evidence-date { color: #555 !important; }
-    .patrol-badge { background: #000 !important; color: white !important; }
-    .evidence-photos img { filter: grayscale(50%); }
-    .print-title { display: block !important; text-align: center; font-size: 20px; font-weight: 700; margin-bottom: 10mm; }
+    
+    /* Header de la evidencia */
+    .evidence-header { 
+        display: flex !important; 
+        justify-content: space-between !important; 
+        align-items: center !important;
+        margin-bottom: 2mm !important;
+        flex-wrap: wrap !important;
+        gap: 2mm !important;
+        border-bottom: 1px solid #ddd !important;
+        padding-bottom: 1mm !important;
+    }
+    
+    .evidence-meta { 
+        display: flex !important; 
+        gap: 4px !important; 
+        align-items: center !important; 
+        flex-wrap: wrap !important;
+    }
+    
+    .evidence-date { 
+        color: #333 !important; 
+        font-size: 10px !important;
+        font-weight: 600 !important;
+    }
+    
+    .patrol-badge { 
+        background: #000 !important; 
+        color: white !important;
+        padding: 1px 6px !important;
+        border-radius: 10px !important;
+        font-size: 9px !important;
+        font-weight: 700 !important;
+    }
+    
+    /* Texto de descripción */
+    .evidence-text { 
+        color: black !important; 
+        font-size: 10px !important;
+        line-height: 1.3 !important; 
+        margin-bottom: 2mm !important;
+        text-align: justify !important;
+        max-height: 15mm !important;
+        overflow: hidden !important;
+    }
+    
+    /* Fotos en grid 2x2 */
+    .evidence-photos { 
+        display: grid !important; 
+        grid-template-columns: 1fr 1fr !important; 
+        gap: 2mm !important;
+    }
+    
+    .evidence-photos img { 
+        width: 100% !important;
+        height: 25mm !important; /* Altura fija más pequeña */
+        object-fit: cover !important;
+        border-radius: 2px !important;
+        border: 1px solid #ddd !important;
+        filter: grayscale(30%) !important;
+    }
+    
+    /* Footer de página */
+    .print-footer {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        font-size: 9px !important;
+        color: #666 !important;
+        text-align: center !important;
+        border-top: 1px solid #ddd !important;
+        padding: 2mm !important;
+    }
 }
-.print-title { display: none; }
+
+/* Título visible solo en impresión */
+.print-title { 
+    display: none; 
+}
