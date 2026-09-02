@@ -27,23 +27,53 @@ async function api(url, options = {}) {
     }
 }
 
+/**
+ * Formatear fecha ISO a formato Perú (dd/mm/yyyy HH:MM a.m./p.m.)
+ */
 function formatDate(iso) {
     if (!iso) return '';
-    const d = new Date(iso);
-    return d.toLocaleString('es-PE', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric', 
-        hour: '2-digit', 
-        minute: '2-digit' 
-    });
+    try {
+        const d = new Date(iso);
+        
+        // Ajustar a hora de Perú (UTC-5)
+        const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+        const peruTime = new Date(utc + (3600000 * -5));
+        
+        const pad = (n) => String(n).padStart(2, '0');
+        const day = pad(peruTime.getDate());
+        const month = pad(peruTime.getMonth() + 1);
+        const year = peruTime.getFullYear();
+        let hours = peruTime.getHours();
+        const minutes = pad(peruTime.getMinutes());
+        const ampm = hours >= 12 ? 'p. m.' : 'a. m.';
+        hours = hours % 12 || 12;
+        
+        return `${day}/${month}/${year}, ${hours}:${minutes} ${ampm}`;
+    } catch (e) {
+        console.error('Error formateando fecha:', e);
+        return iso;
+    }
 }
 
-function toLocalInput(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
+/**
+ * Convertir fecha a formato input datetime-local (YYYY-MM-DDTHH:MM)
+ * Usa hora de Perú (UTC-5)
+ */
+function toLocalInput(dateObj) {
     const pad = (n) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return `${dateObj.getFullYear()}-${pad(dateObj.getMonth()+1)}-${pad(dateObj.getDate())}T${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`;
+}
+
+/**
+ * Obtener fecha/hora actual en Perú (UTC-5)
+ */
+function getPeruDateTime() {
+    const now = new Date();
+    // Obtener hora UTC
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    // Convertir a Perú (UTC-5)
+    const peruTime = new Date(utc + (3600000 * -5));
+    return peruTime;
 }
 
 /* ============ SIDEBAR ============ */
@@ -57,7 +87,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Fecha en topbar
     const today = $('#todayLabel');
     if (today) {
-        today.textContent = new Date().toLocaleDateString('es-PE', { 
+        const peruNow = getPeruDateTime();
+        today.textContent = peruNow.toLocaleDateString('es-PE', { 
             weekday: 'long', 
             day: '2-digit', 
             month: 'long', 
@@ -121,7 +152,7 @@ if ($('#usersTable')) {
                 <td class="text-right">
                     <div class="action-btns">
                         <button class="icon-btn" onclick="editUser('${u.id}')" title="Editar">✏️</button>
-                        <button class="icon-btn danger" onclick="deleteUser('${u.id}', '${u.name}')" title="Eliminar">️</button>
+                        <button class="icon-btn danger" onclick="deleteUser('${u.id}', '${u.name}')" title="Eliminar">🗑️</button>
                     </div>
                 </td>
             </tr>
@@ -231,11 +262,12 @@ if ($('#evidenceForm')) {
                 autoRoleLabel.textContent = rol;
             }
             
-            /// Obtener fecha/hora local (Perú UTC-5)
-const now = new Date();
-const offset = now.getTimezoneOffset() * 60000; // convertir a milisegundos
-const localTime = new Date(now.getTime() - offset);
-$('#fTimestamp').value = toLocalInput(localTime.toISOString());
+            // Fecha/hora actual en Perú
+            const fTimestamp = $('#fTimestamp');
+            if (fTimestamp) {
+                const peruNow = getPeruDateTime();
+                fTimestamp.value = toLocalInput(peruNow);
+            }
             
             console.log('✅ Sesión cargada:', u);
         } catch (error) {
@@ -257,11 +289,11 @@ $('#fTimestamp').value = toLocalInput(localTime.toISOString());
             (pos) => {
                 currentLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                 if (autoGps) autoGps.textContent = `${currentLocation.lat.toFixed(5)}, ${currentLocation.lng.toFixed(5)}`;
-                console.log('📍 GPS obtenido:', currentLocation);
+                console.log(' GPS obtenido:', currentLocation);
             },
             (err) => { 
                 if (autoGps) autoGps.textContent = 'Permiso denegado';
-                console.warn('⚠️ GPS denegado:', err);
+                console.warn('️ GPS denegado:', err);
             },
             { enableHighAccuracy: true, timeout: 10000 }
         );
@@ -288,7 +320,7 @@ $('#fTimestamp').value = toLocalInput(localTime.toISOString());
     const fPhotos = $('#fPhotos');
     if (fPhotos) {
         fPhotos.onchange = (e) => {
-            console.log(' Fotos seleccionadas:', e.target.files.length);
+            console.log('📷 Fotos seleccionadas:', e.target.files.length);
             Array.from(e.target.files).forEach(file => {
                 const reader = new FileReader();
                 reader.onload = (ev) => {
@@ -329,7 +361,7 @@ $('#fTimestamp').value = toLocalInput(localTime.toISOString());
         evidenceForm.onsubmit = async (e) => {
             e.preventDefault();
             
-            console.log('📝 Formulario enviado');
+            console.log(' Formulario enviado');
             
             if (!photoDataUrls.length) { 
                 toast('Adjunta al menos una foto', 'error'); 
@@ -356,7 +388,7 @@ $('#fTimestamp').value = toLocalInput(localTime.toISOString());
                 timestamp: (fTimestamp && fTimestamp.value) ? new Date(fTimestamp.value).toISOString() : null
             };
 
-            console.log(' Payload:', payload);
+            console.log('💾 Payload:', payload);
 
             try {
                 if (editingId) {
@@ -376,7 +408,7 @@ $('#fTimestamp').value = toLocalInput(localTime.toISOString());
                 resetForm();
                 await loadEvidences();
             } catch (error) {
-                console.error('❌ Error al guardar:', error);
+                console.error(' Error al guardar:', error);
             }
         };
     }
@@ -396,7 +428,10 @@ $('#fTimestamp').value = toLocalInput(localTime.toISOString());
         renderPhotos();
         
         const fTimestamp = $('#fTimestamp');
-        if (fTimestamp) fTimestamp.value = toLocalInput(new Date().toISOString());
+        if (fTimestamp) {
+            const peruNow = getPeruDateTime();
+            fTimestamp.value = toLocalInput(peruNow);
+        }
     };
 
     // Listado de evidencias
@@ -448,7 +483,7 @@ $('#fTimestamp').value = toLocalInput(localTime.toISOString());
         if (!container) return;
         
         if (!list.length) {
-            container.innerHTML = '<div class="empty-state"><div class="empty-state-icon"></div><p>Sin registros aún</p></div>';
+            container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>Sin registros aún</p></div>';
             return;
         }
         
@@ -459,7 +494,7 @@ $('#fTimestamp').value = toLocalInput(localTime.toISOString());
                 <div class="evidence-card">
                     <div class="evidence-header">
                         <div class="evidence-meta">
-                            <span class="evidence-date"> ${formatDate(e.timestamp)}</span>
+                            <span class="evidence-date">🕒 ${formatDate(e.timestamp)}</span>
                             ${e.patrol_num ? `<span class="patrol-badge">Patrulla ${e.patrol_num}</span>` : ''}
                         </div>
                     </div>
@@ -512,7 +547,13 @@ $('#fTimestamp').value = toLocalInput(localTime.toISOString());
             
             if (e.timestamp) {
                 const fTimestamp = $('#fTimestamp');
-                if (fTimestamp) fTimestamp.value = toLocalInput(e.timestamp);
+                if (fTimestamp) {
+                    // Convertir UTC a hora local de Perú para el input
+                    const utcDate = new Date(e.timestamp);
+                    const utc = utcDate.getTime() + (utcDate.getTimezoneOffset() * 60000);
+                    const peruDate = new Date(utc + (3600000 * -5));
+                    fTimestamp.value = toLocalInput(peruDate);
+                }
             }
             
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -551,8 +592,20 @@ $('#fTimestamp').value = toLocalInput(localTime.toISOString());
             const response = await fetch('/api/patrol-evidence/pdf?' + params.toString());
             
             if (!response.ok) {
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('text/html')) {
+                    const htmlText = await response.text();
+                    const match = htmlText.match(/<h1>(.*?)<\/h1>/);
+                    const errorMsg = match ? match[1] : `Error ${response.status}`;
+                    throw new Error(errorMsg);
+                }
                 const error = await response.json();
-                throw new Error(error.error || 'Error al generar PDF');
+                throw new Error(error.error || `Error ${response.status}`);
+            }
+            
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/pdf')) {
+                throw new Error('El servidor no devolvió un PDF válido');
             }
             
             const blob = await response.blob();
@@ -567,7 +620,8 @@ $('#fTimestamp').value = toLocalInput(localTime.toISOString());
             
             toast('PDF generado exitosamente', 'success');
         } catch (error) {
-            toast(error.message, 'error');
+            console.error('❌ Error al generar PDF:', error);
+            toast(error.message || 'Error al generar PDF', 'error');
         }
     };
 

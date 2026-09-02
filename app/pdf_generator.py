@@ -9,7 +9,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle, PageBreak
 from reportlab.lib.enums import TA_JUSTIFY
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, timedelta
 import base64
 
 
@@ -55,7 +55,6 @@ def generate_evidence_pdf(evidences, title="EVIDENCIA DE PATRULLAS"):
             try:
                 dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
                 # Convertir UTC a hora de Perú (UTC-5)
-                from datetime import timedelta
                 dt = dt - timedelta(hours=5)
                 formatted_date = dt.strftime('%d/%m/%Y %H:%M')
             except:
@@ -135,8 +134,10 @@ def generate_evidence_pdf(evidences, title="EVIDENCIA DE PATRULLAS"):
         canvas.setFont('Helvetica', 8)
         canvas.drawCentredString(A4[0]/2, header_y, "(SEGURIDAD PATRIMONIAL)")
         
+        # Fecha en hora de Perú
+        peru_now = datetime.utcnow() - timedelta(hours=5)
         canvas.setFont('Helvetica', 8)
-        canvas.drawRightString(A4[0] - 15*mm, header_y + 4*mm, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}")
+        canvas.drawRightString(A4[0] - 15*mm, header_y + 4*mm, f"Fecha: {peru_now.strftime('%d/%m/%Y')}")
         canvas.drawRightString(A4[0] - 15*mm, header_y, f"Página {doc.page}")
         
         canvas.line(15*mm, header_y - 2*mm, A4[0] - 15*mm, header_y - 2*mm)
@@ -149,7 +150,8 @@ def generate_evidence_pdf(evidences, title="EVIDENCIA DE PATRULLAS"):
         footer_y = 12*mm
         canvas.setFont('Helvetica', 7)
         canvas.setFillColor(HexColor('#666666'))
-        canvas.drawCentredString(A4[0]/2, footer_y, f"Generado el {datetime.now().strftime('%d/%m/%Y %H:%M')} - Sistema de Evidencia de Patrullas")
+        # Fecha y hora de generación en Perú
+        canvas.drawCentredString(A4[0]/2, footer_y, f"Generado el {peru_now.strftime('%d/%m/%Y %H:%M')} - Sistema de Evidencia de Patrullas")
         
         canvas.restoreState()
     
