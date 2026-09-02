@@ -231,9 +231,11 @@ if ($('#evidenceForm')) {
                 autoRoleLabel.textContent = rol;
             }
             
-            // Fecha/hora actual
-            const fTimestamp = $('#fTimestamp');
-            if (fTimestamp) fTimestamp.value = toLocalInput(new Date().toISOString());
+            /// Obtener fecha/hora local (Perú UTC-5)
+const now = new Date();
+const offset = now.getTimezoneOffset() * 60000; // convertir a milisegundos
+const localTime = new Date(now.getTime() - offset);
+$('#fTimestamp').value = toLocalInput(localTime.toISOString());
             
             console.log('✅ Sesión cargada:', u);
         } catch (error) {

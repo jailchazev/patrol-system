@@ -54,6 +54,9 @@ def generate_evidence_pdf(evidences, title="EVIDENCIA DE PATRULLAS"):
         if timestamp:
             try:
                 dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                # Convertir UTC a hora de Perú (UTC-5)
+                from datetime import timedelta
+                dt = dt - timedelta(hours=5)
                 formatted_date = dt.strftime('%d/%m/%Y %H:%M')
             except:
                 formatted_date = timestamp
@@ -93,9 +96,8 @@ def generate_evidence_pdf(evidences, title="EVIDENCIA DE PATRULLAS"):
                     continue
             
             if photo_data:
-                # TÉCNICA INFALIBLE: Tabla de 3 columnas para separación exacta de 1cm
                 if len(photo_data) == 2:
-                    spacer_column = Spacer(10*mm, 47*mm)  # 10mm = 1cm de separación
+                    spacer_column = Spacer(10*mm, 47*mm)
                     photo_table = Table([[photo_data[0], spacer_column, photo_data[1]]])
                     photo_table.setStyle(TableStyle([
                         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -103,10 +105,8 @@ def generate_evidence_pdf(evidences, title="EVIDENCIA DE PATRULLAS"):
                     ]))
                     current_page_evidences.append(photo_table)
                 else:
-                    # Si hay 1 sola foto
                     current_page_evidences.append(photo_data[0])
                 
-                # Espacio después de las fotos antes del siguiente reporte
                 current_page_evidences.append(Spacer(1, 5*mm))
         
         if (idx + 1) % evidences_per_page == 0 or idx == len(evidences) - 1:
@@ -125,33 +125,15 @@ def generate_evidence_pdf(evidences, title="EVIDENCIA DE PATRULLAS"):
         canvas.setLineWidth(1)
         canvas.line(15*mm, header_y + 8*mm, A4[0] - 15*mm, header_y + 8*mm)
         
-        # Encabezado corporativo usando tabla de 2 columnas
-from reportlab.platypus import Table, TableStyle
-
-header_data = [
-    ['SOLUCIONES INTEGRALES - PAQUETE 1', 'QUEBRADAS SAN IDELFONSO Y SAN CARLOS'],
-    ['CONSORCIO BESALCO STRACON', '(SEGURIDAD PATRIMONIAL)']
-]
-
-header_table = Table(header_data, colWidths=[90*mm, 90*mm])
-header_table.setStyle(TableStyle([
-    ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
-    ('FONTNAME', (0, 1), (0, 1), 'Helvetica'),
-    ('FONTNAME', (1, 0), (1, 0), 'Helvetica-Bold'),
-    ('FONTNAME', (1, 1), (1, 1), 'Helvetica'),
-    ('FONTSIZE', (0, 0), (-1, -1), 8),
-    ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-    ('ALIGN', (1, 0), (1, -1), 'CENTER'),
-    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-    ('TOPPADDING', (0, 0), (-1, -1), 1*mm),
-    ('BOTTOMPADDING', (0, 0), (-1, -1), 1*mm),
-    ('LEFTPADDING', (0, 0), (-1, -1), 0),
-    ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-]))
-
-# Dibujar la tabla del encabezado
-header_table.wrapOn(canvas, A4[0] - 30*mm, 20*mm)
-header_table.drawOn(canvas, 15*mm, header_y)
+        canvas.setFont('Helvetica-Bold', 9)
+        canvas.drawString(15*mm, header_y + 4*mm, "SOLUCIONES INTEGRALES - PAQUETE 1")
+        canvas.setFont('Helvetica', 8)
+        canvas.drawString(15*mm, header_y, "CONSORCIO BESALCO STRACON")
+        
+        canvas.setFont('Helvetica-Bold', 9)
+        canvas.drawCentredString(A4[0]/2, header_y + 4*mm, "QUEBRADAS SAN IDELFONSO Y SAN CARLOS")
+        canvas.setFont('Helvetica', 8)
+        canvas.drawCentredString(A4[0]/2, header_y, "(SEGURIDAD PATRIMONIAL)")
         
         canvas.setFont('Helvetica', 8)
         canvas.drawRightString(A4[0] - 15*mm, header_y + 4*mm, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}")
