@@ -1,10 +1,10 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from functools import wraps
+from datetime import datetime
 from app import db
 from app.models import User, PatrolEvidence
-from flask import send_file
 from app.pdf_generator import generate_evidence_pdf
 
 # ============ BLUEPRINTS ============
@@ -204,13 +204,11 @@ def list_evidences():
     to_date = request.args.get('to')
     if from_date:
         try:
-            from datetime import datetime
             query = query.filter(PatrolEvidence.timestamp >= datetime.fromisoformat(from_date))
         except Exception:
             pass
     if to_date:
         try:
-            from datetime import datetime
             query = query.filter(PatrolEvidence.timestamp <= datetime.fromisoformat(to_date))
         except Exception:
             pass
@@ -236,7 +234,6 @@ def update_evidence(evidence_id):
             setattr(evidence, field, data[field])
     if data.get('timestamp'):
         try:
-            from datetime import datetime
             evidence.timestamp = datetime.fromisoformat(data['timestamp'])
         except Exception:
             pass
@@ -254,6 +251,7 @@ def delete_evidence(evidence_id):
     db.session.delete(evidence)
     db.session.commit()
     return jsonify({'ok': True})
+
 
 @main_bp.route('/api/patrol-evidence/pdf', methods=['GET'])
 @login_required
@@ -274,15 +272,13 @@ def generate_pdf():
     to_date = request.args.get('to')
     if from_date:
         try:
-            from datetime import datetime
             query = query.filter(PatrolEvidence.timestamp >= datetime.fromisoformat(from_date))
-        except:
+        except Exception:
             pass
     if to_date:
         try:
-            from datetime import datetime
             query = query.filter(PatrolEvidence.timestamp <= datetime.fromisoformat(to_date))
-        except:
+        except Exception:
             pass
     
     if current_user.role != 'admin':
