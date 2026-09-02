@@ -11,20 +11,19 @@ login_manager = LoginManager()
 def create_app():
     app = Flask(__name__)
 
-    # Configuración
+    # Configuración básica
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'patrol-secret-key-change-me-2026')
     
-    # ←←← ESTO ES LO IMPORTANTE ←←←
+    # Configuración de Base de Datos (PostgreSQL en Render, SQLite local)
     db_url = os.environ.get('DATABASE_URL')
     if db_url and db_url.startswith('postgres://'):
         db_url = db_url.replace('postgres://', 'postgresql://', 1)
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_url or 'sqlite:///patrol.db'
-    # ←←← FIN DE LO IMPORTANTE ←←←
     
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url or 'sqlite:///patrol.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB para fotos base64
 
-    # Inicializar extensiones
+    # Inicializar extensiones con la app
     db.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
@@ -41,14 +40,14 @@ def create_app():
     with app.app_context():
         db.create_all()
         _create_default_admin()
+        
+        # Debug seguro (ahora sí está DENTRO del contexto de la app)
+        print("=" * 60)
+        print(f"DATABASE_URL del entorno: {os.environ.get('DATABASE_URL', 'NO CONFIGURADA')}")
+        print(f"Base de datos en uso: {app.config['SQLALCHEMY_DATABASE_URI']}")
+        print("=" * 60)
 
     return app
-
-    # Debug: Imprimir qué base de datos se está usando
-print("=" * 50)
-print(f"DATABASE_URL from env: {os.environ.get('DATABASE_URL', 'NOT SET')}")
-print(f"Using URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
-print("=" * 50)
 
 
 def _create_default_admin():
