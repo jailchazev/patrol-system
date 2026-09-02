@@ -400,19 +400,38 @@ if ($('#evidenceForm')) {
         } catch (e) {}
     };
 
-    window.generatePDF = function() {
-        // Asegurar título visible en impresión
-        let title = $('.print-title');
-        if (!title) {
-            title = document.createElement('h1');
-            title.className = 'print-title';
-            title.textContent = 'EVIDENCIA DE PATRULLAS';
-            $('#evidenceList').before(title);
+window.generatePDF = async function() {
+    // Construir URL con filtros actuales
+    const params = new URLSearchParams();
+    const p = $('#filterPatrol').value; if (p) params.set('patrol', p);
+    const f = $('#filterFrom').value; if (f) params.set('from', new Date(f).toISOString());
+    const t = $('#filterTo').value; if (t) params.set('to', new Date(t + 'T23:59:59').toISOString());
+    const z = $('#filterZona').value; if (z) params.set('zona', z);
+    
+    try {
+        toast('Generando PDF...', 'info');
+        
+        // Llamar al endpoint del servidor
+        const response = await fetch('/api/patrol-evidence/pdf?' + params.toString());
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Error al generar PDF');
         }
-        window.print();
-    };
-
-    loadSession();
-    getGPS();
-    loadEvidences();
-}
+        
+        // Descargar el PDF
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `evidencia_patrullas_${new Date().getTime()}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast('PDF generado exitosamente', 'success');
+    } catch (error) {
+        toast(error.message, 'error');
+    }
+};

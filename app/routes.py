@@ -4,6 +4,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from functools import wraps
 from app import db
 from app.models import User, PatrolEvidence
+from flask import send_file
+from app.pdf_generator import generate_evidence_pdf
 
 # ============ BLUEPRINTS ============
 auth_bp = Blueprint('auth', __name__)
@@ -252,3 +254,55 @@ def delete_evidence(evidence_id):
     db.session.delete(evidence)
     db.session.commit()
     return jsonify({'ok': True})
+
+@main_bp.route('/api/patrol-evidence/pdf', methods=['GET'])
+@login_required
+def generate_pdf():
+    """Genera PDF profesional con encabezado corporativo."""
+    # Obtener evidencias (mismos filtros que el listado)
+    query = PatrolEvidence.query
+    
+    patrol = request.args.get('patrol')
+    if patrol:
+        query = query.filter(PatrolEvidence.patrol_num == patrol)
+    
+    zona = request.args.get('zona')
+    if zona:
+        query = query.filter(PatrolEvidence.zona.ilike(f'%{zona}%'))
+    
+    from_date = request.args.get('from')
+    to_date = request.args.get('to')
+    if from_date:
+        try:
+            from datetime import datetime
+            query = query.filter(PatrolEvidence.timestamp >= datetime.fromisoformat(from_date))
+        except:
+            pass
+    if to_date:
+        try:
+            from datetime import datetime
+            query = query.filter(PatrolEvidence.timestamp <= datetime.fromisoformat(to_date))
+        except:
+            pass
+    
+    if current_user.role != 'admin':
+        query = query.filter(PatrolEvidence.user_id == current_user.id)
+    
+    evidences = query.order_by(PatrolEvidence.timestamp.desc()).all()
+    
+    if not evidences:
+        return jsonify({'error': 'No hay evidencias para generar el PDF'}), 400
+    
+    # Generar PDF
+    pdf_buffer = generate_evidence_pdf(
+        [e.to_dict() for e in evidences],
+        title="REPORTE SEMANAL"
+    )
+    
+    # Enviar PDF
+    return send_file(
+        pdf_buffer,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'evidencia_patrullas_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+    )
