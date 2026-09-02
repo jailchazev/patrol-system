@@ -13,9 +13,16 @@ def create_app():
 
     # Configuración
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'patrol-secret-key-change-me-2026')
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///patrol.db'
+    
+    # ←←← ESTO ES LO IMPORTANTE ←←←
+    db_url = os.environ.get('DATABASE_URL')
+    if db_url and db_url.startswith('postgres://'):
+        db_url = db_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url or 'sqlite:///patrol.db'
+    # ←←← FIN DE LO IMPORTANTE ←←←
+    
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB para fotos base64
+    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
     # Inicializar extensiones
     db.init_app(app)
@@ -36,6 +43,12 @@ def create_app():
         _create_default_admin()
 
     return app
+
+    # Debug: Imprimir qué base de datos se está usando
+print("=" * 50)
+print(f"DATABASE_URL from env: {os.environ.get('DATABASE_URL', 'NOT SET')}")
+print(f"Using URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+print("=" * 50)
 
 
 def _create_default_admin():
