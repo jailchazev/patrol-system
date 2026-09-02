@@ -93,23 +93,28 @@ def generate_evidence_pdf(evidences, title="EVIDENCIA DE PATRULLAS"):
                     continue
             
             if photo_data:
-                # Si hay 2 fotos, ponerlas lado a lado con espacio
-                if len(photo_data) == 2:
-                    photo_table = Table([photo_data], colWidths=[75*mm, 75*mm])
-                    photo_table.setStyle(TableStyle([
-                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                        ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-                    ]))
-                    current_page_evidences.append(photo_table)
-                    # Espacio de 1 cm después de las fotos
-                    current_page_evidences.append(Spacer(1, 10*mm))
-                else:
-                    # Si hay 1 sola foto, centrarla
-                    for img in photo_data:
-                        current_page_evidences.append(img)
-                        current_page_evidences.append(Spacer(1, 10*mm))
+    # Si hay 2 fotos, ponerlas lado a lado con espacio de 1cm entre ellas
+    if len(photo_data) == 2:
+        # Crear tabla con espacio entre columnas (1cm = 10mm)
+        photo_table = Table([photo_data], colWidths=[75*mm, 75*mm])
+        photo_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            # Espacio de 1cm entre columnas
+            ('COLSPACING', (0, 0), (1, 0), 10*mm),
+        ]))
+        current_page_evidences.append(photo_table)
+        # Espacio después del reporte completo
+        current_page_evidences.append(Spacer(1, 5*mm))
+    else:
+        # Si hay 1 sola foto
+        for img in photo_data:
+            current_page_evidences.append(img)
+        current_page_evidences.append(Spacer(1, 5*mm))
         
         if (idx + 1) % evidences_per_page == 0 or idx == len(evidences) - 1:
             story.extend(current_page_evidences)
