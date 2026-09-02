@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a1224">
+    <title>Iniciar sesión · Patrullas</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="login-body">
+    <div class="login-card">
+        <div class="login-header">
+            <div class="login-logo">🛡️</div>
+            <h1>Sistema de Patrullas</h1>
+            <p>Registro de evidencia operativa</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('auth.login') }}" class="login-form">
+            <div class="form-group">
+                <label for="code">Código de trabajador</label>
+                <input type="text" id="code" name="code" required autocomplete="username" autofocus
+                       placeholder="Ej: 12345">
+            </div>
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password"
+                       placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Ingresar</button>
+        </form>
+
+        <div class="login-footer">
+            <small>© 2026 · Sistema de Evidencia de Patrullas</small>
+        </div>
+    </div>
+</body>
+</html>

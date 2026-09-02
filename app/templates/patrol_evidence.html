@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Evidencia de Patrullas{% endblock %}
+{% block page_title %}Evidencia de Patrullas{% endblock %}
+
+{% block content %}
+<!-- FORMULARIO -->
+<section class="card" id="formSection">
+    <div class="card-header">
+        <h3>📸 Registrar nueva evidencia</h3>
+    </div>
+    <div class="card-body">
+        <!-- Datos automáticos -->
+        <div class="auto-info">
+            <div class="auto-item">
+                <span class="auto-label">Operador</span>
+                <span class="auto-value" id="autoUser">—</span>
+            </div>
+            <div class="auto-item">
+                <span class="auto-label">Unidad</span>
+                <span class="auto-value" id="autoUnit">—</span>
+            </div>
+            <div class="auto-item">
+                <span class="auto-label">Fecha / Hora</span>
+                <input type="datetime-local" id="fTimestamp" class="input">
+            </div>
+            <div class="auto-item">
+                <span class="auto-label">GPS</span>
+                <span class="auto-value" id="autoGps">Obteniendo...</span>
+                <button type="button" class="btn btn-mini" onclick="getGPS()">📍 Actualizar</button>
+            </div>
+        </div>
+
+        <form id="evidenceForm" class="evidence-form">
+            <!-- Selector de patrulla -->
+            <div class="form-group">
+                <label>Número de patrulla</label>
+                <div class="patrol-selector">
+                    <button type="button" class="patrol-btn" data-patrol="01">01</button>
+                    <button type="button" class="patrol-btn" data-patrol="02">02</button>
+                    <button type="button" class="patrol-btn" data-patrol="03">03</button>
+                    <button type="button" class="patrol-btn" data-patrol="04">04</button>
+                    <button type="button" class="patrol-btn" data-patrol="05">05</button>
+                </div>
+                <input type="hidden" id="fPatrol">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Paquete / KM</label>
+                    <input type="text" id="fPaquete" class="input" placeholder="Ej: KM 45">
+                </div>
+                <div class="form-group">
+                    <label>Progresiva</label>
+                    <input type="text" id="fProgresiva" class="input" placeholder="Ej: 120+500">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Margen</label>
+                    <select id="fMargen" class="input">
+                        <option value="">— Seleccionar —</option>
+                        <option value="Derecho">Derecho</option>
+                        <option value="Izquierdo">Izquierdo</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Zona *</label>
+                    <input type="text" id="fZona" class="input" required placeholder="Ej: Norte">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Descripción *</label>
+                <textarea id="fDescripcion" class="input" rows="3" required
+                    placeholder="Describa lo observado durante la patrulla..."></textarea>
+            </div>
+
+            <!-- Fotos -->
+            <div class="form-group">
+                <label>Evidencia fotográfica * (mínimo 1)</label>
+                <div class="photo-upload">
+                    <input type="file" id="fPhotos" accept="image/*" capture="environment" multiple class="input-file">
+                    <label for="fPhotos" class="photo-upload-label">
+                        <span class="photo-icon">📷</span>
+                        <span>Toca para tomar foto o seleccionar</span>
+                    </label>
+                </div>
+                <div class="photo-preview" id="photoPreview"></div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-ghost" onclick="resetForm()">Limpiar</button>
+                <button type="submit" class="btn btn-primary">💾 Guardar evidencia</button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<!-- FILTROS Y REPORTE -->
+<section class="card">
+    <div class="card-header">
+        <h3>📋 Reportes de patrullas</h3>
+        <button class="btn btn-primary" onclick="generatePDF()">🖨️ Generar PDF</button>
+    </div>
+    <div class="card-body">
+        <div class="filters-bar">
+            <select id="filterPatrol" class="input">
+                <option value="">Todas las patrullas</option>
+                <option value="01">Patrulla 01</option>
+                <option value="02">Patrulla 02</option>
+                <option value="03">Patrulla 03</option>
+                <option value="04">Patrulla 04</option>
+                <option value="05">Patrulla 05</option>
+            </select>
+            <input type="date" id="filterFrom" class="input">
+            <input type="date" id="filterTo" class="input">
+            <input type="text" id="filterZona" class="input" placeholder="🔍 Zona...">
+            <button class="btn btn-secondary" onclick="loadEvidences()">Filtrar</button>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid" id="evidenceStats"></div>
+
+        <!-- Lista -->
+        <div class="evidence-list" id="evidenceList"></div>
+    </div>
+</section>
+{% endblock %}

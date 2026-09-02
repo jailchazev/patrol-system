@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Administración de Usuarios{% endblock %}
+{% block page_title %}Gestión de Usuarios{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2 class="page-title">Usuarios del sistema</h2>
+        <p class="page-subtitle">Administra trabajadores, roles y accesos</p>
+    </div>
+    <button class="btn btn-primary" onclick="openUserModal()">+ Nuevo usuario</button>
+</div>
+
+<!-- Estadísticas -->
+<div class="stats-grid" id="statsGrid">
+    <div class="stat-card">
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-label">Total usuarios</div>
+    </div>
+    <div class="stat-card stat-admin">
+        <div class="stat-value" id="statAdmin">0</div>
+        <div class="stat-label">Administradores</div>
+    </div>
+    <div class="stat-card stat-sup">
+        <div class="stat-value" id="statSup">0</div>
+        <div class="stat-label">Supervisores</div>
+    </div>
+    <div class="stat-card stat-guard">
+        <div class="stat-value" id="statGuard">0</div>
+        <div class="stat-label">Guardias</div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="filters-bar">
+    <input type="text" id="searchInput" placeholder="🔍 Buscar por nombre o código..." class="input">
+    <select id="filterRole" class="input">
+        <option value="">Todos los roles</option>
+        <option value="admin">Admin</option>
+        <option value="supervisor">Supervisor</option>
+        <option value="guardia">Guardia</option>
+    </select>
+    <select id="filterUnit" class="input">
+        <option value="">Todas las unidades</option>
+    </select>
+</div>
+
+<!-- Tabla -->
+<div class="table-wrapper">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Unidad</th>
+                <th>Puesto</th>
+                <th>Rol</th>
+                <th>Turno</th>
+                <th class="text-right">Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="usersTable"></tbody>
+    </table>
+</div>
+
+<!-- Modal Usuario -->
+<div class="modal" id="userModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Nuevo usuario</h3>
+            <button class="modal-close" onclick="closeUserModal()">✕</button>
+        </div>
+        <form id="userForm" class="modal-body">
+            <input type="hidden" id="userId">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Código *</label>
+                    <input type="text" id="fCode" required class="input" style="text-transform:uppercase">
+                </div>
+                <div class="form-group">
+                    <label>Rol *</label>
+                    <select id="fRole" required class="input">
+                        <option value="guardia">Guardia</option>
+                        <option value="supervisor">Supervisor</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Nombre completo *</label>
+                <input type="text" id="fName" required class="input">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Unidad *</label>
+                    <input type="text" id="fUnit" required class="input">
+                </div>
+                <div class="form-group">
+                    <label>Puesto</label>
+                    <input type="text" id="fPost" class="input">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Turno</label>
+                    <select id="fShift" class="input">
+                        <option value="dia">Día</option>
+                        <option value="noche">Noche</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Contraseña <span id="pwdHint">(mín. 6)</span></label>
+                    <input type="password" id="fPassword" class="input" minlength="6">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" onclick="closeUserModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
