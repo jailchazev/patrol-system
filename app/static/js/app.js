@@ -202,11 +202,21 @@ if ($('#evidenceForm')) {
 
     // Cargar datos del usuario
     async function loadSession() {
-        const u = await api('/api/session');
-        $('#autoUser').textContent = u.name;
-        $('#autoUnit').textContent = u.unit || '—';
-        $('#fTimestamp').value = toLocalInput(new Date().toISOString());
-    }
+    const u = await api('/api/session');
+    
+    // Mostrar nombre del usuario
+    $('#autoUser').textContent = u.name;
+    
+    // Mostrar unidad
+    $('#autoUnit').textContent = u.unit || '—';
+    
+    // Actualizar label con el rol (primera letra mayúscula)
+    const rol = u.role ? u.role.charAt(0).toUpperCase() + u.role.slice(1) : 'Usuario';
+    $('#autoRoleLabel').textContent = rol;
+    
+    // Fecha/hora actual
+    $('#fTimestamp').value = toLocalInput(new Date().toISOString());
+}
 
     // GPS
     window.getGPS = function() {
