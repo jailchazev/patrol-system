@@ -35,7 +35,7 @@ function formatDate(iso) {
         month: '2-digit', 
         year: 'numeric', 
         hour: '2-digit', 
-        minute: '2-digit' // ← AQUÍ ESTABA EL ERROR
+        minute: '2-digit' 
     });
 }
 
@@ -57,7 +57,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Fecha en topbar
     const today = $('#todayLabel');
     if (today) {
-        today.textContent = new Date().toLocaleDateString('es-PE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+        today.textContent = new Date().toLocaleDateString('es-PE', { 
+            weekday: 'long', 
+            day: '2-digit', 
+            month: 'long', 
+            year: 'numeric' 
+        });
     }
 });
 
@@ -116,7 +121,7 @@ if ($('#usersTable')) {
                 <td class="text-right">
                     <div class="action-btns">
                         <button class="icon-btn" onclick="editUser('${u.id}')" title="Editar">✏️</button>
-                        <button class="icon-btn danger" onclick="deleteUser('${u.id}', '${u.name}')" title="Eliminar">🗑️</button>
+                        <button class="icon-btn danger" onclick="deleteUser('${u.id}', '${u.name}')" title="Eliminar">️</button>
                     </div>
                 </td>
             </tr>
@@ -206,65 +211,103 @@ if ($('#evidenceForm')) {
     let photoDataUrls = [];
     let editingId = null;
 
-    // Cargar datos del usuario
+    // Cargar datos del usuario y mostrar ROL dinámico
     async function loadSession() {
-    const u = await api('/api/session');
-    
-    // Mostrar nombre del usuario
-    $('#autoUser').textContent = u.name;
-    
-    // Mostrar unidad
-    $('#autoUnit').textContent = u.unit || '—';
-    
-    // Actualizar label con el rol (primera letra mayúscula)
-    const rol = u.role ? u.role.charAt(0).toUpperCase() + u.role.slice(1) : 'Usuario';
-    $('#autoRoleLabel').textContent = rol;
-    
-    // Fecha/hora actual
-    $('#fTimestamp').value = toLocalInput(new Date().toISOString());
-}
+        try {
+            const u = await api('/api/session');
+            
+            // Mostrar nombre del usuario
+            const autoUser = $('#autoUser');
+            if (autoUser) autoUser.textContent = u.name || '—';
+            
+            // Mostrar unidad
+            const autoUnit = $('#autoUnit');
+            if (autoUnit) autoUnit.textContent = u.unit || '—';
+            
+            // MOSTRAR ROL DINÁMICO (Resguardo, Guardia, etc.)
+            const autoRoleLabel = $('#autoRoleLabel');
+            if (autoRoleLabel && u.role) {
+                const rol = u.role.charAt(0).toUpperCase() + u.role.slice(1);
+                autoRoleLabel.textContent = rol;
+            }
+            
+            // Fecha/hora actual
+            const fTimestamp = $('#fTimestamp');
+            if (fTimestamp) fTimestamp.value = toLocalInput(new Date().toISOString());
+            
+            console.log('✅ Sesión cargada:', u);
+        } catch (error) {
+            console.error('❌ Error cargando sesión:', error);
+            toast('Error al cargar datos del usuario', 'error');
+        }
+    }
 
     // GPS
     window.getGPS = function() {
-        $('#autoGps').textContent = 'Obteniendo...';
+        const autoGps = $('#autoGps');
+        if (autoGps) autoGps.textContent = 'Obteniendo...';
+        
         if (!navigator.geolocation) {
-            $('#autoGps').textContent = 'No disponible';
+            if (autoGps) autoGps.textContent = 'No disponible';
             return;
         }
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 currentLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                $('#autoGps').textContent = `${currentLocation.lat.toFixed(5)}, ${currentLocation.lng.toFixed(5)}`;
+                if (autoGps) autoGps.textContent = `${currentLocation.lat.toFixed(5)}, ${currentLocation.lng.toFixed(5)}`;
+                console.log('📍 GPS obtenido:', currentLocation);
             },
-            () => { $('#autoGps').textContent = 'Permiso denegado'; },
+            (err) => { 
+                if (autoGps) autoGps.textContent = 'Permiso denegado';
+                console.warn('⚠️ GPS denegado:', err);
+            },
             { enableHighAccuracy: true, timeout: 10000 }
         );
     };
 
-    // Selector patrulla
-    $$('.patrol-btn').forEach(btn => {
-        btn.onclick = () => {
-            $$('.patrol-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            $('#fPatrol').value = btn.dataset.patrol;
-        };
-    });
-
-    // Fotos
-    $('#fPhotos').onchange = (e) => {
-        Array.from(e.target.files).forEach(file => {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                photoDataUrls.push(ev.target.result);
-                renderPhotos();
+    // Selector de patrulla - FUNCIONAL
+    const patrolBtns = $$('.patrol-btn');
+    if (patrolBtns.length > 0) {
+        patrolBtns.forEach(btn => {
+            btn.onclick = function() {
+                // Quitar active de todos
+                patrolBtns.forEach(b => b.classList.remove('active'));
+                // Agregar active al clickeado
+                this.classList.add('active');
+                // Guardar valor
+                const fPatrol = $('#fPatrol');
+                if (fPatrol) fPatrol.value = this.dataset.patrol;
+                console.log('🎯 Patrulla seleccionada:', this.dataset.patrol);
             };
-            reader.readAsDataURL(file);
         });
-        e.target.value = '';
-    };
+    }
+
+    // Fotos - FUNCIONAL
+    const fPhotos = $('#fPhotos');
+    if (fPhotos) {
+        fPhotos.onchange = (e) => {
+            console.log(' Fotos seleccionadas:', e.target.files.length);
+            Array.from(e.target.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    photoDataUrls.push(ev.target.result);
+                    renderPhotos();
+                };
+                reader.readAsDataURL(file);
+            });
+            e.target.value = ''; // Reset para permitir seleccionar la misma foto
+        };
+    }
 
     function renderPhotos() {
         const container = $('#photoPreview');
+        if (!container) return;
+        
+        if (photoDataUrls.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        
         container.innerHTML = photoDataUrls.map((src, i) => `
             <div class="photo-thumb">
                 <img src="${src}" alt="foto ${i+1}">
@@ -278,79 +321,135 @@ if ($('#evidenceForm')) {
         renderPhotos();
     };
 
-    // Submit
-    $('#evidenceForm').onsubmit = async (e) => {
-        e.preventDefault();
-        if (!photoDataUrls.length) { toast('Adjunta al menos una foto', 'error'); return; }
-
-        const payload = {
-            patrol_num: $('#fPatrol').value,
-            paquete: $('#fPaquete').value,
-            progresiva: $('#fProgresiva').value,
-            margen: $('#fMargen').value,
-            zona: $('#fZona').value,
-            descripcion: $('#fDescripcion').value,
-            photos: photoDataUrls,
-            location: currentLocation,
-            timestamp: $('#fTimestamp').value ? new Date($('#fTimestamp').value).toISOString() : null
-        };
-
-        try {
-            if (editingId) {
-                await api(`/api/patrol-evidence/${editingId}`, { method: 'PUT', body: JSON.stringify(payload) });
-                toast('Registro actualizado', 'success');
-            } else {
-                await api('/api/patrol-evidence', { method: 'POST', body: JSON.stringify(payload) });
-                toast('Evidencia guardada', 'success');
+    // Submit del formulario - FUNCIONAL
+    const evidenceForm = $('#evidenceForm');
+    if (evidenceForm) {
+        evidenceForm.onsubmit = async (e) => {
+            e.preventDefault();
+            
+            console.log('📝 Formulario enviado');
+            
+            if (!photoDataUrls.length) { 
+                toast('Adjunta al menos una foto', 'error'); 
+                return; 
             }
-            resetForm();
-            loadEvidences();
-        } catch (e) {}
-    };
+
+            const fPatrol = $('#fPatrol');
+            const fPaquete = $('#fPaquete');
+            const fProgresiva = $('#fProgresiva');
+            const fMargen = $('#fMargen');
+            const fZona = $('#fZona');
+            const fDescripcion = $('#fDescripcion');
+            const fTimestamp = $('#fTimestamp');
+
+            const payload = {
+                patrol_num: fPatrol ? fPatrol.value : '',
+                paquete: fPaquete ? fPaquete.value : '',
+                progresiva: fProgresiva ? fProgresiva.value : '',
+                margen: fMargen ? fMargen.value : '',
+                zona: fZona ? fZona.value : '',
+                descripcion: fDescripcion ? fDescripcion.value : '',
+                photos: photoDataUrls,
+                location: currentLocation,
+                timestamp: (fTimestamp && fTimestamp.value) ? new Date(fTimestamp.value).toISOString() : null
+            };
+
+            console.log(' Payload:', payload);
+
+            try {
+                if (editingId) {
+                    await api(`/api/patrol-evidence/${editingId}`, { 
+                        method: 'PUT', 
+                        body: JSON.stringify(payload) 
+                    });
+                    toast('Registro actualizado', 'success');
+                } else {
+                    const saved = await api('/api/patrol-evidence', { 
+                        method: 'POST', 
+                        body: JSON.stringify(payload) 
+                    });
+                    console.log('✅ Evidencia guardada:', saved);
+                    toast('Evidencia guardada', 'success');
+                }
+                resetForm();
+                await loadEvidences();
+            } catch (error) {
+                console.error('❌ Error al guardar:', error);
+            }
+        };
+    }
 
     window.resetForm = function() {
-        $('#evidenceForm').reset();
-        $$('.patrol-btn').forEach(b => b.classList.remove('active'));
-        $('#fPatrol').value = '';
+        const evidenceForm = $('#evidenceForm');
+        if (evidenceForm) evidenceForm.reset();
+        
+        const patrolBtns = $$('.patrol-btn');
+        if (patrolBtns) patrolBtns.forEach(b => b.classList.remove('active'));
+        
+        const fPatrol = $('#fPatrol');
+        if (fPatrol) fPatrol.value = '';
+        
         photoDataUrls = [];
         editingId = null;
         renderPhotos();
-        $('#fTimestamp').value = toLocalInput(new Date().toISOString());
+        
+        const fTimestamp = $('#fTimestamp');
+        if (fTimestamp) fTimestamp.value = toLocalInput(new Date().toISOString());
     };
 
-    // Listado
+    // Listado de evidencias
     window.loadEvidences = async function() {
+        console.log(' Cargando evidencias...');
+        
         const params = new URLSearchParams();
-        const p = $('#filterPatrol').value; if (p) params.set('patrol', p);
-        const f = $('#filterFrom').value; if (f) params.set('from', new Date(f).toISOString());
-        const t = $('#filterTo').value; if (t) params.set('to', new Date(t + 'T23:59:59').toISOString());
-        const z = $('#filterZona').value; if (z) params.set('zona', z);
+        const filterPatrol = $('#filterPatrol');
+        const filterFrom = $('#filterFrom');
+        const filterTo = $('#filterTo');
+        const filterZona = $('#filterZona');
+        
+        if (filterPatrol && filterPatrol.value) params.set('patrol', filterPatrol.value);
+        if (filterFrom && filterFrom.value) params.set('from', new Date(filterFrom.value).toISOString());
+        if (filterTo && filterTo.value) params.set('to', new Date(filterTo.value + 'T23:59:59').toISOString());
+        if (filterZona && filterZona.value) params.set('zona', filterZona.value);
 
-        const list = await api('/api/patrol-evidence?' + params.toString());
-        renderEvidenceList(list);
-        renderEvidenceStats(list);
+        try {
+            const list = await api('/api/patrol-evidence?' + params.toString());
+            console.log('✅ Evidencias recibidas:', list.length);
+            
+            renderEvidenceList(list);
+            renderEvidenceStats(list);
+        } catch (error) {
+            console.error('❌ Error cargando evidencias:', error);
+        }
     };
 
     function renderEvidenceStats(list) {
+        const container = $('#evidenceStats');
+        if (!container) return;
+        
         const total = list.length;
         const byPatrol = {};
         list.forEach(e => {
             const k = e.patrol_num || '—';
             byPatrol[k] = (byPatrol[k] || 0) + 1;
         });
+        
         const html = `<div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total registros</div></div>` +
             Object.entries(byPatrol).map(([k, v]) =>
                 `<div class="stat-card"><div class="stat-value">${v}</div><div class="stat-label">Patrulla ${k}</div></div>`
             ).join('');
-        $('#evidenceStats').innerHTML = html;
+        container.innerHTML = html;
     }
 
     function renderEvidenceList(list) {
         const container = $('#evidenceList');
+        if (!container) return;
+        
         if (!list.length) {
-            container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>Sin registros aún</p></div>';
+            container.innerHTML = '<div class="empty-state"><div class="empty-state-icon"></div><p>Sin registros aún</p></div>';
             return;
         }
+        
         container.innerHTML = list.map(e => {
             const texto = `${e.user_name}, realizó ronda por Paquete ${e.paquete || '—'}, ${e.progresiva || '—'}, margen ${e.margen || '—'} ${e.zona}. ${e.descripcion}`;
             const fotos = (e.photos || []).slice(0, 2).map(src => `<img src="${src}" alt="evidencia">`).join('');
@@ -358,7 +457,7 @@ if ($('#evidenceForm')) {
                 <div class="evidence-card">
                     <div class="evidence-header">
                         <div class="evidence-meta">
-                            <span class="evidence-date">🕒 ${formatDate(e.timestamp)}</span>
+                            <span class="evidence-date"> ${formatDate(e.timestamp)}</span>
                             ${e.patrol_num ? `<span class="patrol-badge">Patrulla ${e.patrol_num}</span>` : ''}
                         </div>
                     </div>
@@ -374,21 +473,51 @@ if ($('#evidenceForm')) {
     }
 
     window.editEvidence = async (id) => {
-        const list = await api('/api/patrol-evidence');
-        const e = list.find(x => x.id === id);
-        if (!e) return;
-        editingId = id;
-        $('#fPatrol').value = e.patrol_num;
-        $$('.patrol-btn').forEach(b => b.classList.toggle('active', b.dataset.patrol === e.patrol_num));
-        $('#fPaquete').value = e.paquete;
-        $('#fProgresiva').value = e.progresiva;
-        $('#fMargen').value = e.margen;
-        $('#fZona').value = e.zona;
-        $('#fDescripcion').value = e.descripcion;
-        photoDataUrls = [...(e.photos || [])];
-        renderPhotos();
-        if (e.timestamp) $('#fTimestamp').value = toLocalInput(e.timestamp);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        try {
+            const list = await api('/api/patrol-evidence');
+            const e = list.find(x => x.id === id);
+            if (!e) return;
+            
+            editingId = id;
+            
+            const fPatrol = $('#fPatrol');
+            if (fPatrol) fPatrol.value = e.patrol_num;
+            
+            const patrolBtns = $$('.patrol-btn');
+            if (patrolBtns) {
+                patrolBtns.forEach(b => {
+                    b.classList.toggle('active', b.dataset.patrol === e.patrol_num);
+                });
+            }
+            
+            const fPaquete = $('#fPaquete');
+            if (fPaquete) fPaquete.value = e.paquete;
+            
+            const fProgresiva = $('#fProgresiva');
+            if (fProgresiva) fProgresiva.value = e.progresiva;
+            
+            const fMargen = $('#fMargen');
+            if (fMargen) fMargen.value = e.margen;
+            
+            const fZona = $('#fZona');
+            if (fZona) fZona.value = e.zona;
+            
+            const fDescripcion = $('#fDescripcion');
+            if (fDescripcion) fDescripcion.value = e.descripcion;
+            
+            photoDataUrls = [...(e.photos || [])];
+            renderPhotos();
+            
+            if (e.timestamp) {
+                const fTimestamp = $('#fTimestamp');
+                if (fTimestamp) fTimestamp.value = toLocalInput(e.timestamp);
+            }
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            toast('Editando registro...', 'info');
+        } catch (error) {
+            console.error('❌ Error al editar:', error);
+        }
     };
 
     window.deleteEvidence = async (id) => {
@@ -397,41 +526,52 @@ if ($('#evidenceForm')) {
             await api(`/api/patrol-evidence/${id}`, { method: 'DELETE' });
             toast('Registro eliminado', 'success');
             loadEvidences();
-        } catch (e) {}
+        } catch (error) {
+            console.error('❌ Error al eliminar:', error);
+        }
     };
 
-window.generatePDF = async function() {
-    // Construir URL con filtros actuales
-    const params = new URLSearchParams();
-    const p = $('#filterPatrol').value; if (p) params.set('patrol', p);
-    const f = $('#filterFrom').value; if (f) params.set('from', new Date(f).toISOString());
-    const t = $('#filterTo').value; if (t) params.set('to', new Date(t + 'T23:59:59').toISOString());
-    const z = $('#filterZona').value; if (z) params.set('zona', z);
-    
-    try {
-        toast('Generando PDF...', 'info');
+    window.generatePDF = async function() {
+        const params = new URLSearchParams();
+        const filterPatrol = $('#filterPatrol');
+        const filterFrom = $('#filterFrom');
+        const filterTo = $('#filterTo');
+        const filterZona = $('#filterZona');
         
-        // Llamar al endpoint del servidor
-        const response = await fetch('/api/patrol-evidence/pdf?' + params.toString());
+        if (filterPatrol && filterPatrol.value) params.set('patrol', filterPatrol.value);
+        if (filterFrom && filterFrom.value) params.set('from', new Date(filterFrom.value).toISOString());
+        if (filterTo && filterTo.value) params.set('to', new Date(filterTo.value + 'T23:59:59').toISOString());
+        if (filterZona && filterZona.value) params.set('zona', filterZona.value);
         
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Error al generar PDF');
+        try {
+            toast('Generando PDF...', 'info');
+            
+            const response = await fetch('/api/patrol-evidence/pdf?' + params.toString());
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Error al generar PDF');
+            }
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `evidencia_patrullas_${new Date().getTime()}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            toast('PDF generado exitosamente', 'success');
+        } catch (error) {
+            toast(error.message, 'error');
         }
-        
-        // Descargar el PDF
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `evidencia_patrullas_${new Date().getTime()}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        toast('PDF generado exitosamente', 'success');
-    } catch (error) {
-        toast(error.message, 'error');
-    }
-};
+    };
+
+    // INICIALIZAR
+    console.log('🚀 Inicializando módulo de evidencias...');
+    loadSession();
+    getGPS();
+    loadEvidences();
+}
