@@ -29,26 +29,23 @@ async function api(url, options = {}) {
 
 /**
  * Formatear fecha ISO a formato Perú (dd/mm/yyyy HH:MM a.m./p.m.)
+ * Usa la zona horaria de Lima (America/Lima)
  */
 function formatDate(iso) {
     if (!iso) return '';
     try {
         const d = new Date(iso);
         
-        // Ajustar a hora de Perú (UTC-5)
-        const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
-        const peruTime = new Date(utc + (3600000 * -5));
-        
-        const pad = (n) => String(n).padStart(2, '0');
-        const day = pad(peruTime.getDate());
-        const month = pad(peruTime.getMonth() + 1);
-        const year = peruTime.getFullYear();
-        let hours = peruTime.getHours();
-        const minutes = pad(peruTime.getMinutes());
-        const ampm = hours >= 12 ? 'p. m.' : 'a. m.';
-        hours = hours % 12 || 12;
-        
-        return `${day}/${month}/${year}, ${hours}:${minutes} ${ampm}`;
+        // Usar toLocaleString con zona horaria de Perú
+        return d.toLocaleString('es-PE', {
+            timeZone: 'America/Lima',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
     } catch (e) {
         console.error('Error formateando fecha:', e);
         return iso;
