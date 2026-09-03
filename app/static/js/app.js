@@ -29,15 +29,13 @@ async function api(url, options = {}) {
 
 /**
  * Formatear fecha ISO a formato Perú (UTC-5)
- * Simplemente resta 5 horas al timestamp UTC
  */
 function formatDate(iso) {
     if (!iso) return '';
     try {
         const d = new Date(iso);
-        
-        // Restar 5 horas directamente al timestamp
-        const peruTimestamp = d.getTime() - (10 * 60 * 60 * 1000);
+        // Restar 5 horas directamente al timestamp (UTC a Perú)
+        const peruTimestamp = d.getTime() - (5 * 60 * 60 * 1000);
         const peruDate = new Date(peruTimestamp);
         
         const pad = (n) => String(n).padStart(2, '0');
@@ -74,19 +72,16 @@ function getPeruDateTime() {
 }
 
 /**
- * Convierte una cadena de fecha local (del input datetime-local) a UTC, 
- * asumiendo que la entrada representa hora de Perú (UTC-5)
+ * Convierte una cadena de fecha local a UTC, asumiendo que la entrada es hora de Perú (UTC-5)
  */
 function peruTimeToUTC(localString) {
     if (!localString) {
         return getPeruDateTime().toISOString();
     }
-    // localString es "YYYY-MM-DDThh:mm"
     const [datePart, timePart] = localString.split('T');
     const [year, month, day] = datePart.split('-').map(Number);
     const [hours, minutes] = timePart.split(':').map(Number);
     
-    // Crear fecha en UTC y sumar 5 horas para convertir Perú a UTC real
     const date = new Date(Date.UTC(year, month - 1, day, hours, minutes));
     date.setUTCHours(date.getUTCHours() + 5);
     
@@ -202,7 +197,9 @@ if (getEl('#usersTable')) {
         e.preventDefault();
         const id = getEl('#userId').value;
         const payload = {
-            code: getEl('#fCode').value, name: getEl('#fName').value, unit: getEl('#fUnit').value,
+            code: getEl('#fCode').value, 
+            name: getEl('#fName').value, 
+            unit: getEl('#fUnit').value,
             role: getEl('#fRole').value
         };
         const pwd = getEl('#fPassword').value;
@@ -280,7 +277,6 @@ if (getEl('#evidenceForm')) {
         });
     }
 
-    // Manejo de fotos (Cámara y Galería)
     function handlePhotoSelect(files) {
         Array.from(files).forEach(file => {
             const reader = new FileReader();
@@ -364,7 +360,6 @@ if (getEl('#evidenceForm')) {
         editingId = null;
         window.renderPhotos();
         
-        // Actualizar fecha/hora automáticamente con formato correcto para datetime-local
         const fTimestamp = getEl('#fTimestamp');
         if (fTimestamp) {
             fTimestamp.value = toLocalInput(getPeruDateTime());
@@ -413,8 +408,24 @@ if (getEl('#evidenceForm')) {
         }
         container.innerHTML = list.map(e => {
             const roleDisplay = e.user_role ? e.user_role.charAt(0).toUpperCase() + e.user_role.slice(1) : '';
-const rolePrefix = roleDisplay ? `${roleDisplay}: ` : '';
-const texto = `${rolePrefix}${e.user_name}, realizó ronda por Paquete ${e.paquete || '—'}, ${e.progresiva || '—'}, margen ${e.margen || '—'} ${e.zona}. ${e.descripcion}`;
+            const rolePrefix = roleDisplay ? `${roleDisplay}: ` : '';
+
+            // Construir texto dinámicamente solo con campos llenos y sus prefijos
+            const partes = [];
+            if (e.paquete) partes.push(`Paquete ${e.paquete}`);
+            if (e.progresiva) partes.push(`Progresiva ${e.progresiva}`);
+            if (e.margen) partes.push(`margen ${e.margen}`);
+            if (e.zona) partes.push(`Zona ${e.zona}`);
+
+            const ubicacion = partes.length > 0 ? partes.join(', ') : '';
+            const descripcion = e.descripcion || '';
+
+            let texto = `${rolePrefix}${e.user_name}`;
+            if (ubicacion) texto += `, realizó ronda por ${ubicacion}`;
+            if (descripcion) texto += `. ${descripcion}`;
+            if (!ubicacion && !descripcion) texto += ', realizó ronda de inspección';
+            texto += '.';
+
             const fotos = (e.photos || []).slice(0, 2).map(src => `<img src="${src}" alt="evidencia">`).join('');
             return `
                 <div class="evidence-card">
@@ -492,10 +503,20 @@ const texto = `${rolePrefix}${e.user_name}, realizó ronda por Paquete ${e.paque
         try {
             toast('Generando PDF...', 'info');
             const response = await fetch('/api/patrol-evidence/pdf?' + params.toString());
+            
+            const contentType = response.headers.get("content-type");
             if (!response.ok) {
+                if (contentType && contentType.includes("text/html")) {
+                    throw new Error("Error interno del servidor al generar el PDF.");
+                }
                 const error = await response.json();
-                throw new Error(error.error || `Error ${response.status}`);
+                throw new Error(error.error || `Error del servidor: ${response.status}`);
             }
+            
+            if (!contentType || !contentType.includes('application/pdf')) {
+                throw new Error("El servidor no devolvió un archivo PDF válido.");
+            }
+            
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -505,10 +526,11 @@ const texto = `${rolePrefix}${e.user_name}, realizó ronda por Paquete ${e.paque
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
+            
             toast('PDF generado exitosamente', 'success');
         } catch (error) {
             console.error('❌ Error al generar PDF:', error);
-            toast(error.message || 'Error al generar PDF', 'error');
+            toast(error.message || 'Error al generar el PDF', 'error');
         }
     };
 

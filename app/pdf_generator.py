@@ -67,19 +67,37 @@ def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
         patrol_badge = f"<b>Patrulla {patrol_num}</b>" if patrol_num else ""
         
         user_name = evidence.get('user_name', 'Desconocido')
-        user_role = evidence.get('user_role', '')
-        paquete = evidence.get('paquete', '—')
-        progresiva = evidence.get('progresiva', '—')
-        margen = evidence.get('margen', '—')
-        zona = evidence.get('zona', '')
-        descripcion = evidence.get('descripcion', '')
-        
-        # Capitalizar primera letra del rol y agregar prefijo
-        role_display = user_role.capitalize() if user_role else ''
-        role_prefix = f"{role_display}: " if role_display else ""
-        
-        evidence_text = f"{role_prefix}{user_name}, realizó ronda por Paquete {paquete}, {progresiva}, margen {margen} {zona}. {descripcion}"
-        
+user_role = evidence.get('user_role', '')
+paquete = evidence.get('paquete', '')
+progresiva = evidence.get('progresiva', '')
+margen = evidence.get('margen', '')
+zona = evidence.get('zona', '')
+descripcion = evidence.get('descripcion', '')
+
+role_display = user_role.capitalize() if user_role else ''
+role_prefix = f"{role_display}: " if role_display else ""
+
+# Construir texto dinámicamente solo con campos llenos
+partes = []
+if paquete:
+    partes.append(f"Paquete {paquete}")
+if progresiva:
+    partes.append(f"Progresiva {progresiva}")
+if margen:
+    partes.append(f"margen {margen}")
+if zona:
+    partes.append(f"Zona {zona}")
+
+ubicacion = ', '.join(partes)
+
+evidence_text = f"{role_prefix}{user_name}"
+if ubicacion:
+    evidence_text += f", realizó ronda por {ubicacion}"
+if descripcion:
+    evidence_text += f". {descripcion}"
+if not ubicacion and not descripcion:
+    evidence_text += ", realizó ronda de inspección"
+evidence_text += "."        
         current_page_evidences.append(Paragraph(f"<b>{formatted_date}</b> {patrol_badge}", date_style))
         current_page_evidences.append(Spacer(1, 2*mm))
         current_page_evidences.append(Paragraph(evidence_text, evidence_style))

@@ -160,8 +160,8 @@ def evidence_page():
 def create_evidence():
     data = request.get_json() or {}
 
-    if not data.get('zona') or not data.get('descripcion'):
-        return jsonify({'error': 'Zona y descripción son obligatorios'}), 400
+    if not data.get('descripcion'):
+    return jsonify({'error': 'La descripción es obligatoria'}), 400
     photos = data.get('photos') or []
     if not photos:
         return jsonify({'error': 'Debe adjuntar al menos una foto'}), 400
