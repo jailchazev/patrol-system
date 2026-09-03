@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, send_from_directory, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from functools import wraps
@@ -6,7 +6,6 @@ from datetime import datetime
 from app import db
 from app.models import User, PatrolEvidence
 from app.pdf_generator import generate_evidence_pdf
-from flask import send_from_directory, current_app
 
 # ============ BLUEPRINTS ============
 auth_bp = Blueprint('auth', __name__)
@@ -192,7 +191,6 @@ def create_evidence():
 def list_evidences():
     query = PatrolEvidence.query
 
-    # Filtros
     patrol = request.args.get('patrol')
     if patrol:
         query = query.filter(PatrolEvidence.patrol_num == patrol)
@@ -214,7 +212,6 @@ def list_evidences():
         except Exception:
             pass
 
-    # Admin ve todo, otros solo las suyas
     if current_user.role != 'admin':
         query = query.filter(PatrolEvidence.user_id == current_user.id)
 
@@ -258,7 +255,6 @@ def delete_evidence(evidence_id):
 @login_required
 def generate_pdf():
     """Genera PDF profesional con encabezado corporativo."""
-    # Obtener evidencias (mismos filtros que el listado)
     query = PatrolEvidence.query
     
     patrol = request.args.get('patrol')
@@ -290,13 +286,11 @@ def generate_pdf():
     if not evidences:
         return jsonify({'error': 'No hay evidencias para generar el PDF'}), 400
     
-    # Generar PDF
     pdf_buffer = generate_evidence_pdf(
         [e.to_dict() for e in evidences],
         title="REPORTE SEMANAL"
     )
     
-    # Enviar PDF
     return send_file(
         pdf_buffer,
         mimetype='application/pdf',
@@ -304,7 +298,9 @@ def generate_pdf():
         download_name=f'evidencia_patrullas_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
     )
 
-    @main_bp.route('/sw.js')
+
+# ============ SERVICE WORKER PARA PWA ============
+@main_bp.route('/sw.js')
 def service_worker():
     """Sirve el Service Worker desde la raíz para que el alcance sea toda la app."""
     return send_from_directory(current_app.static_folder, 'sw.js', mimetype='application/javascript')
