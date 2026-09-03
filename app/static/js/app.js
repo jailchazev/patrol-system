@@ -35,44 +35,20 @@ function formatDate(iso) {
     if (!iso) return '';
     try {
         const d = new Date(iso);
+        // Restar 5 horas (UTC a Perú)
+        const peruDate = new Date(d.getTime() - (5 * 60 * 60 * 1000));
         
-        // Obtener componentes UTC
-        const utcYear = d.getUTCFullYear();
-        const utcMonth = d.getUTCMonth();
-        const utcDay = d.getUTCDate();
-        let utcHours = d.getUTCHours();
-        const utcMinutes = d.getUTCMinutes();
-        
-        // Restar 5 horas para Perú (UTC-5)
-        let peruHours = utcHours - 5;
-        let peruDay = utcDay;
-        let peruMonth = utcMonth;
-        let peruYear = utcYear;
-        
-        // Ajustar si pasa a día anterior
-        if (peruHours < 0) {
-            peruHours += 24;
-            peruDay -= 1;
-            if (peruDay < 1) {
-                peruMonth -= 1;
-                if (peruMonth < 0) {
-                    peruMonth = 11;
-                    peruYear -= 1;
-                }
-                // Días en el mes anterior (simplificado)
-                const daysInMonth = new Date(peruYear, peruMonth + 1, 0).getDate();
-                peruDay = daysInMonth;
-            }
-        }
-        
-        // Formatear
         const pad = (n) => String(n).padStart(2, '0');
-        const ampm = peruHours >= 12 ? 'p. m.' : 'a. m.';
-        const displayHours = peruHours % 12 || 12;
+        const day = pad(peruDate.getUTCDate());
+        const month = pad(peruDate.getUTCMonth() + 1);
+        const year = peruDate.getUTCFullYear();
+        let hours = peruDate.getUTCHours();
+        const minutes = pad(peruDate.getUTCMinutes());
+        const ampm = hours >= 12 ? 'p. m.' : 'a. m.';
+        const displayHours = hours % 12 || 12;
         
-        return `${pad(peruDay)}/${pad(peruMonth + 1)}/${peruYear}, ${pad(displayHours)}:${pad(utcMinutes)} ${ampm}`;
+        return `${day}/${month}/${year}, ${String(displayHours).padStart(2, '0')}:${minutes} ${ampm}`;
     } catch (e) {
-        console.error('Error formateando fecha:', e);
         return iso;
     }
 }
