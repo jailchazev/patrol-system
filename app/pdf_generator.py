@@ -1,5 +1,5 @@
 """
-Generador de PDF profesional para evidencias de patrullas.
+Generador de PDF para evidencias de patrullas.
 """
 
 from reportlab.lib.pagesizes import A4
@@ -14,13 +14,12 @@ import base64
 
 
 def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
-    """Genera PDF con encabezado corporativo tipo tabla."""
     buffer = BytesIO()
     
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        topMargin=45*mm,
+        topMargin=40*mm,
         bottomMargin=20*mm,
         leftMargin=15*mm,
         rightMargin=15*mm
@@ -114,77 +113,18 @@ def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
             if idx < len(evidences) - 1:
                 story.append(PageBreak())
     
-    def add_header_footer(canvas, doc):
+    # Encabezado simple
+    def add_header(canvas, doc):
         canvas.saveState()
-        
-        # Ancho total disponible
-        page_width = A4[0]
-        left_margin = 15*mm
-        right_margin = 15*mm
-        available_width = page_width - left_margin - right_margin
-        
-        # Anchos de columnas
-        col_logo = 35*mm
-        col_fecha = 35*mm
-        col_centro = available_width - col_logo - col_fecha
-        
-        # Obtener fecha actual en Perú
-        peru_now = datetime.utcnow() - timedelta(hours=5)
-        fecha_str = peru_now.strftime('%d/%m/%Y')
-        pagina_str = f"Página {doc.page}"
-        
-        # Estilos simplificados
-        estilo_titulo = ParagraphStyle('EstiloTitulo', fontSize=8, leading=10, alignment=TA_CENTER, fontName='Helvetica-Bold')
-        estilo_subtitulo = ParagraphStyle('EstiloSubtitulo', fontSize=7, leading=9, alignment=TA_CENTER, fontName='Helvetica')
-        estilo_titulo_grande = ParagraphStyle('EstiloTituloGrande', fontSize=10, leading=12, alignment=TA_CENTER, fontName='Helvetica-Bold')
-        estilo_texto = ParagraphStyle('EstiloTexto', fontSize=8, alignment=TA_LEFT, fontName='Helvetica')
-        
-        # Usar texto en lugar de logo para evitar errores
-        logo_texto = Paragraph("<b>BESALCO | STRACON</b>", estilo_titulo)
-        
-        # Datos de la tabla
-        header_data = [
-            [logo_texto, 
-             Paragraph("SOLUCIONES INTEGRALES - PAQUETE 1<br/>QUEBRADAS SAN IDELFONSO Y SAN CARLOS", estilo_titulo),
-             Paragraph("Fecha:", estilo_texto)],
-            ['',
-             Paragraph("CONSORCIO BESALCO STRACON<br/>(SEGURIDAD PATRIMONIAL)", estilo_subtitulo),
-             Paragraph(fecha_str, estilo_texto)],
-            ['',
-             Paragraph(title, estilo_titulo_grande),
-             Paragraph(pagina_str, estilo_texto)]
-        ]
-        
-        # Crear tabla
-        header_table = Table(header_data, colWidths=[col_logo, col_centro, col_fecha], rowHeights=[12*mm, 10*mm, 10*mm])
-        header_table.setStyle(TableStyle([
-            ('GRID', (0, 0), (-1, -1), 0.5, black),
-            ('SPAN', (0, 0), (0, 2)),  # Logo fusionado
-            ('SPAN', (2, 0), (2, 1)),  # Fecha fusionada
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
-            ('ALIGN', (1, 0), (1, -1), 'CENTER'),
-            ('ALIGN', (2, 0), (2, -1), 'LEFT'),
-            ('TOPPADDING', (0, 0), (-1, -1), 2),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-            ('LEFTPADDING', (0, 0), (-1, -1), 3),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 3),
-        ]))
-        
-        # Posición del encabezado
-        header_y = A4[1] - 42*mm
-        header_table.wrapOn(canvas, available_width, 32*mm)
-        header_table.drawOn(canvas, left_margin, header_y)
-        
-        # Pie de página
-        footer_y = 12*mm
-        canvas.setFont('Helvetica', 7)
-        canvas.setFillColor(HexColor('#666666'))
-        canvas.drawCentredString(A4[0]/2, footer_y, f"Generado el {peru_now.strftime('%d/%m/%Y %H:%M')} - Sistema de Evidencia de Patrullas")
-        
+        canvas.setFont('Helvetica-Bold', 12)
+        canvas.drawCentredString(A4[0]/2, A4[1] - 20*mm, title)
+        canvas.setFont('Helvetica', 8)
+        fecha = datetime.utcnow() - timedelta(hours=5)
+        canvas.drawCentredString(A4[0]/2, A4[1] - 25*mm, f"Fecha: {fecha.strftime('%d/%m/%Y')} - Página {doc.page}")
+        canvas.line(15*mm, A4[1] - 28*mm, A4[0]-15*mm, A4[1] - 28*mm)
         canvas.restoreState()
     
-    doc.build(story, onFirstPage=add_header_footer, onLaterPages=add_header_footer)
+    doc.build(story, onFirstPage=add_header, onLaterPages=add_header)
     
     buffer.seek(0)
     return buffer
