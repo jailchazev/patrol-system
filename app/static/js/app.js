@@ -400,31 +400,37 @@ if (getEl('#evidenceForm')) {
     }
 
     function renderEvidenceList(list) {
-        const container = getEl('#evidenceList');
-        if (!container) return;
-        if (!list.length) {
-            container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>Sin registros aún</p></div>';
-            return;
-        }
-        container.innerHTML = list.map(e => {
-            const roleDisplay = e.user_role ? e.user_role.charAt(0).toUpperCase() + e.user_role.slice(1) : '';
-            const rolePrefix = roleDisplay ? `${roleDisplay}: ` : '';
+    const container = getEl('#evidenceList');
+    if (!container) return;
+    if (!list.length) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon"></div><p>Sin registros aún</p></div>';
+        return;
+    }
+    container.innerHTML = list.map(e => {
+        const roleDisplay = e.user_role ? e.user_role.charAt(0).toUpperCase() + e.user_role.slice(1) : '';
+        const rolePrefix = roleDisplay ? `${roleDisplay}: ` : '';
 
-            // Construir texto dinámicamente solo con campos llenos y sus prefijos
-            const partes = [];
-            if (e.paquete) partes.push(`Paquete ${e.paquete}`);
-            if (e.progresiva) partes.push(`Progresiva ${e.progresiva}`);
-            if (e.margen) partes.push(`margen ${e.margen}`);
-            if (e.zona) partes.push(`Zona ${e.zona}`);
+        // Limpiar valores de posibles prefijos duplicados
+        const paquete = e.paquete ? e.paquete.replace(/paquete\s*/gi, '').trim() : '';
+        const progresiva = e.progresiva ? e.progresiva.replace(/progresiva\s*/gi, '').trim() : '';
+        const margen = e.margen ? e.margen.replace(/margen\s*/gi, '').trim() : '';
+        const zona = e.zona ? e.zona.replace(/zona\s*/gi, '').trim() : '';
 
-            const ubicacion = partes.length > 0 ? partes.join(', ') : '';
-            const descripcion = e.descripcion || '';
+        // Construir texto dinámicamente solo con campos llenos y sus prefijos
+        const partes = [];
+        if (paquete) partes.push(`Paquete ${paquete}`);
+        if (progresiva) partes.push(`Progresiva ${progresiva}`);
+        if (margen) partes.push(`margen ${margen}`);
+        if (zona) partes.push(`Zona ${zona}`);
 
-            let texto = `${rolePrefix}${e.user_name}`;
-            if (ubicacion) texto += `, realizó ronda por ${ubicacion}`;
-            if (descripcion) texto += `. ${descripcion}`;
-            if (!ubicacion && !descripcion) texto += ', realizó ronda de inspección';
-            texto += '.';
+        const ubicacion = partes.length > 0 ? partes.join(', ') : '';
+        const descripcion = e.descripcion || '';
+
+        let texto = `${rolePrefix}${e.user_name}`;
+        if (ubicacion) texto += `, realizó ronda por ${ubicacion}`;
+        if (descripcion) texto += `. ${descripcion}`;
+        if (!ubicacion && !descripcion) texto += ', realizó ronda de inspección';
+        texto += '.';
 
             const fotos = (e.photos || []).slice(0, 2).map(src => `<img src="${src}" alt="evidencia">`).join('');
             return `

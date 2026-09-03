@@ -78,16 +78,22 @@ def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
         role_display = user_role.capitalize() if user_role else ''
         role_prefix = f"{role_display}: " if role_display else ""
 
+        # Limpiar valores de posibles prefijos duplicados
+        paquete_clean = paquete.replace('paquete', '').strip() if paquete else ''
+        progresiva_clean = progresiva.replace('progresiva', '').strip() if progresiva else ''
+        margen_clean = margen.replace('margen', '').strip() if margen else ''
+        zona_clean = zona.replace('zona', '').strip() if zona else ''
+
         # Construir texto dinámicamente solo con campos llenos
         partes = []
-        if paquete:
-            partes.append(f"Paquete {paquete}")
-        if progresiva:
-            partes.append(f"Progresiva {progresiva}")
-        if margen:
-            partes.append(f"margen {margen}")
-        if zona:
-            partes.append(f"Zona {zona}")
+        if paquete_clean:
+            partes.append(f"Paquete {paquete_clean}")
+        if progresiva_clean:
+            partes.append(f"Progresiva {progresiva_clean}")
+        if margen_clean:
+            partes.append(f"margen {margen_clean}")
+        if zona_clean:
+            partes.append(f"Zona {zona_clean}")
 
         ubicacion = ', '.join(partes)
 
