@@ -160,8 +160,10 @@ def evidence_page():
 def create_evidence():
     data = request.get_json() or {}
 
+    # Solo la descripción es obligatoria, Zona ya no lo es
     if not data.get('descripcion'):
-    return jsonify({'error': 'La descripción es obligatoria'}), 400
+        return jsonify({'error': 'La descripción es obligatoria'}), 400
+    
     photos = data.get('photos') or []
     if not photos:
         return jsonify({'error': 'Debe adjuntar al menos una foto'}), 400
@@ -172,7 +174,7 @@ def create_evidence():
         paquete=data.get('paquete', ''),
         progresiva=data.get('progresiva', ''),
         margen=data.get('margen', ''),
-        zona=data['zona'].strip(),
+        zona=data.get('zona', ''),
         descripcion=data['descripcion'].strip(),
         photos=photos,
         location=data.get('location')
