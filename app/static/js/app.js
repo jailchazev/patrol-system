@@ -64,6 +64,22 @@ function getPeruDateTime() {
     return new Date(utc + (3600000 * -5));
 }
 
+/**
+ * Convierte una cadena de fecha local (del input) a UTC, asumiendo que la entrada es hora de Perú (UTC-5)
+ */
+function peruTimeToUTC(localString) {
+    if (!localString) {
+        // Si está vacío, usar la hora actual de Perú convertida a UTC
+        return getPeruDateTime().toISOString();
+    }
+    // 1. Forzamos que el string se interprete como UTC (ej: "2026-09-03T05:09:00Z")
+    const date = new Date(localString + ":00Z");
+    // 2. Le sumamos 5 horas para obtener el UTC real 
+    // (Ej: Si el usuario puso 05:09 AM en Perú, el UTC real es 10:09 AM)
+    date.setUTCHours(date.getUTCHours() + 5);
+    return date.toISOString();
+}
+
 /* ============ SIDEBAR ============ */
 document.addEventListener('DOMContentLoaded', () => {
     const sidebar = getEl('#sidebar');
@@ -307,7 +323,7 @@ if (getEl('#evidenceForm')) {
                 descripcion: getEl('#fDescripcion')?.value || '',
                 photos: photoDataUrls,
                 location: currentLocation,
-                timestamp: getEl('#fTimestamp')?.value ? new Date(getEl('#fTimestamp').value).toISOString() : null
+                timestamp: peruTimeToUTC(getEl('#fTimestamp')?.value)
             };
 
             try {
