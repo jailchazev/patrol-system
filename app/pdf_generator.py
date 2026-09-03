@@ -21,7 +21,7 @@ def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        topMargin=30*mm,
+        topMargin=45*mm,  # Aumentado para dejar espacio al encabezado
         bottomMargin=20*mm,
         leftMargin=15*mm,
         rightMargin=15*mm
@@ -119,8 +119,6 @@ def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
         canvas.saveState()
         
         # ========== ENCABEZADO TIPO TABLA ==========
-        header_y = A4[1] - 15*mm  # Posición vertical del encabezado
-        
         # Ancho total disponible
         page_width = A4[0]
         left_margin = 15*mm
@@ -141,59 +139,62 @@ def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
         estilo_titulo = ParagraphStyle('EstiloTitulo', fontSize=8, leading=10, alignment=TA_CENTER, fontName='Helvetica-Bold')
         estilo_subtitulo = ParagraphStyle('EstiloSubtitulo', fontSize=7, leading=9, alignment=TA_CENTER, fontName='Helvetica')
         estilo_titulo_grande = ParagraphStyle('EstiloTituloGrande', fontSize=10, leading=12, alignment=TA_CENTER, fontName='Helvetica-Bold')
-        estilo_fecha_label = ParagraphStyle('EstiloFechaLabel', fontSize=8, alignment=TA_CENTER, fontName='Helvetica')
-        estilo_fecha_valor = ParagraphStyle('EstiloFechaValor', fontSize=8, alignment=TA_CENTER, fontName='Helvetica')
+        estilo_fecha = ParagraphStyle('EstiloFecha', fontSize=8, alignment=TA_LEFT, fontName='Helvetica')
+        estilo_fecha_valor = ParagraphStyle('EstiloFechaValor', fontSize=8, alignment=TA_LEFT, fontName='Helvetica')
+        estilo_pagina = ParagraphStyle('EstiloPagina', fontSize=8, alignment=TA_LEFT, fontName='Helvetica')
         
         # Intentar cargar el logo
         logo_path = os.path.join(os.path.dirname(__file__), 'static', 'logo.png')
         if os.path.exists(logo_path):
             logo = Image(logo_path, width=30*mm, height=12*mm)
         else:
-            # Si no hay logo, usar texto
             logo = Paragraph("<b>BESALCO | STRACON</b>", estilo_titulo)
         
-        # Fila 1: Logo + Texto superior + Fecha
-        fila1 = [
-            logo,
-            Paragraph("SOLUCIONES INTEGRALES - PAQUETE 1<br/>QUEBRADAS SAN IDELFONSO Y SAN CARLOS", estilo_titulo),
-            Paragraph(f"Fecha:<br/>{fecha_str}", estilo_fecha_label)
+        # Estructura de la tabla: 3 filas x 3 columnas
+        # Fila 0: Logo | SOLUCIONES INTEGRALES... | Fecha:
+        # Fila 1: (logo span) | CONSORCIO BESALCO... | 03/09/2026
+        # Fila 2: (logo span) | REPORTE SEMANAL | Página 1
+        
+        header_data = [
+            [logo, 
+             Paragraph("SOLUCIONES INTEGRALES - PAQUETE 1<br/>QUEBRADAS SAN IDELFONSO Y SAN CARLOS", estilo_titulo),
+             Paragraph("Fecha:", estilo_fecha)],
+            ['',
+             Paragraph("CONSORCIO BESALCO STRACON<br/>(SEGURIDAD PATRIMONIAL)", estilo_subtitulo),
+             Paragraph(fecha_str, estilo_fecha_valor)],
+            ['',
+             Paragraph(title, estilo_titulo_grande),
+             Paragraph(pagina_str, estilo_pagina)]
         ]
         
-        # Fila 2: (logo vacío) + Texto consorcio + Página
-        fila2 = [
-            '',
-            Paragraph("CONSORCIO BESALCO STRACON<br/>(SEGURIDAD PATRIMONIAL)", estilo_subtitulo),
-            Paragraph(pagina_str, estilo_fecha_label)
-        ]
-        
-        # Fila 3: (logo vacío) + Título del reporte + (vacío)
-        fila3 = [
-            '',
-            Paragraph(title, estilo_titulo_grande),
-            ''
-        ]
-        
-        # Crear tabla con 3 filas y 3 columnas
-        header_table = Table([fila1, fila2, fila3], colWidths=[col_logo, col_centro, col_fecha])
+        # Crear tabla
+        header_table = Table(header_data, colWidths=[col_logo, col_centro, col_fecha], rowHeights=[12*mm, 10*mm, 10*mm])
         header_table.setStyle(TableStyle([
             # Bordes de todas las celdas
             ('GRID', (0, 0), (-1, -1), 0.5, black),
+            # Fusionar logo verticalmente (filas 0-2, columna 0)
+            ('SPAN', (0, 0), (0, 2)),
+            # Fusionar fecha verticalmente (filas 0-1, columna 2)
+            ('SPAN', (2, 0), (2, 1)),
             # Alineación vertical centrada
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             # Alineación horizontal
             ('ALIGN', (0, 0), (0, -1), 'CENTER'),  # Logo centrado
             ('ALIGN', (1, 0), (1, -1), 'CENTER'),  # Texto central centrado
-            ('ALIGN', (2, 0), (2, -1), 'CENTER'),  # Fecha centrada
+            ('ALIGN', (2, 0), (2, -1), 'LEFT'),    # Fecha alineada a la izquierda
             # Padding
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
             ('LEFTPADDING', (0, 0), (-1, -1), 3),
             ('RIGHTPADDING', (0, 0), (-1, -1), 3),
         ]))
         
+        # Posición del encabezado (desde arriba de la página)
+        header_y = A4[1] - 42*mm  # Ajustado para que no se superponga con el contenido
+        
         # Dibujar la tabla del encabezado
-        header_table.wrapOn(canvas, available_width, 30*mm)
-        header_table.drawOn(canvas, left_margin, header_y - 25*mm)
+        header_table.wrapOn(canvas, available_width, 32*mm)
+        header_table.drawOn(canvas, left_margin, header_y)
         
         # ========== PIE DE PÁGINA ==========
         footer_y = 12*mm
