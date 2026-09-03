@@ -309,7 +309,10 @@ def service_worker():
 def manifest_file():
     from flask import Response
     import os
-    file_path = os.path.join(current_app.static_folder, 'manifest.webmanifest')
+    # El archivo está en la raíz del proyecto
+    file_path = os.path.join(current_app.root_path, '..', 'manifest.webmanifest.json')
+    file_path = os.path.normpath(file_path)
+    
     if os.path.exists(file_path):
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
