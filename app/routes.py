@@ -101,9 +101,7 @@ def create_user():
         code=code,
         name=name,
         unit=data.get('unit', '').strip(),
-        post=data.get('post', '').strip(),
         role=data.get('role', 'guardia'),
-        shift=data.get('shift', 'dia'),
         password_hash=generate_password_hash(password)
     )
     db.session.add(user)
@@ -127,11 +125,8 @@ def update_user(user_id):
     if data.get('name'):
         user.name = data['name'].strip()
     user.unit = (data.get('unit') or '').strip()
-    user.post = (data.get('post') or '').strip()
     if data.get('role'):
         user.role = data['role']
-    if data.get('shift'):
-        user.shift = data['shift']
     if data.get('password'):
         if len(data['password']) < 6:
             return jsonify({'error': 'La contraseña debe tener al menos 6 caracteres'}), 400

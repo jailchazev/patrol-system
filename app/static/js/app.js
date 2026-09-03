@@ -181,9 +181,7 @@ if (getEl('#usersTable')) {
             getEl('#fCode').value = user.code;
             getEl('#fName').value = user.name;
             getEl('#fUnit').value = user.unit;
-            getEl('#fPost').value = user.post;
             getEl('#fRole').value = user.role;
-            getEl('#fShift').value = user.shift;
             getEl('#fPassword').required = false;
             getEl('#pwdHint').textContent = '(dejar vacío = no cambiar)';
         } else {
@@ -205,7 +203,7 @@ if (getEl('#usersTable')) {
         const id = getEl('#userId').value;
         const payload = {
             code: getEl('#fCode').value, name: getEl('#fName').value, unit: getEl('#fUnit').value,
-            post: getEl('#fPost').value, role: getEl('#fRole').value, shift: getEl('#fShift').value
+            role: getEl('#fRole').value
         };
         const pwd = getEl('#fPassword').value;
         if (pwd) payload.password = pwd;
