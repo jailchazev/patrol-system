@@ -1,8 +1,12 @@
 import os
+import mimetypes
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from werkzeug.security import generate_password_hash
+
+# Registrar MIME type para webmanifest (crítico para PWA en Android)
+mimetypes.add_type('application/manifest+json', '.webmanifest')
 
 # Inicializar extensiones
 db = SQLAlchemy()
@@ -10,11 +14,6 @@ login_manager = LoginManager()
 
 def create_app():
     app = Flask(__name__)
-
-    # Registrar MIME type para webmanifest (crítico para PWA en Android)
-app.config['MIME_TYPES'] = {
-    '.webmanifest': 'application/manifest+json'
-}
 
     # Configuración básica
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'patrol-secret-key-change-me-2026')
@@ -46,7 +45,7 @@ app.config['MIME_TYPES'] = {
         db.create_all()
         _create_default_admin()
         
-        # Debug seguro (ahora sí está DENTRO del contexto de la app)
+        # Debug seguro
         print("=" * 60)
         print(f"DATABASE_URL del entorno: {os.environ.get('DATABASE_URL', 'NO CONFIGURADA')}")
         print(f"Base de datos en uso: {app.config['SQLALCHEMY_DATABASE_URI']}")
@@ -71,8 +70,3 @@ def _create_default_admin():
         db.session.add(admin)
         db.session.commit()
         print("✅ Usuario admin creado: code=ADMIN / password=admin123")
-
-        # Registrar MIME type para webmanifest (crítico para PWA en Android)
-app.config['MIME_TYPES'] = {
-    '.webmanifest': 'application/manifest+json'
-}
