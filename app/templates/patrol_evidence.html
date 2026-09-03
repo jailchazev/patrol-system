@@ -12,9 +12,9 @@
         <!-- Datos automáticos -->
         <div class="auto-info">
             <div class="auto-item">
-            <span class="auto-label" id="autoRoleLabel">Operador</span>
-            <span class="auto-value" id="autoUser">—</span>
-        </div>
+                <span class="auto-label" id="autoRoleLabel">Operador</span>
+                <span class="auto-value" id="autoUser">—</span>
+            </div>
             <div class="auto-item">
                 <span class="auto-label">Unidad</span>
                 <span class="auto-value" id="autoUnit">—</span>
@@ -78,32 +78,29 @@
 
             <!-- Fotos -->
             <div class="form-group">
-    <label>Evidencia fotográfica * (2 fotos)</label>
-    
-    <!-- Botón para cámara -->
-    <div class="photo-upload" style="margin-bottom: 10px;">
-        <input type="file" id="fPhotosCamera" accept="image/*" capture="environment" 
-               multiple class="input-file" style="display: none;">
-        <button type="button" class="btn btn-primary btn-block" 
-                onclick="document.getElementById('fPhotosCamera').click()">
-            📷 Tomar foto con cámara
-        </button>
-    </div>
-    
-    <!-- Botón para galería -->
-    <div class="photo-upload">
-        <input type="file" id="fPhotosGallery" accept="image/*" 
-               multiple class="input-file" style="display: none;">
-        <button type="button" class="btn btn-secondary btn-block" 
-                onclick="document.getElementById('fPhotosGallery').click()">
-            🖼️ Seleccionar de galería
-        </button>
-    </div>
-    
-    <!-- Vista previa de fotos -->
-    <div class="photo-preview" id="photoPreview"></div>
-</div>
+                <label>Evidencia fotográfica * (2 fotos)</label>
+                
+                <!-- Botón para cámara -->
+                <div class="photo-upload" style="margin-bottom: 10px;">
+                    <input type="file" id="fPhotosCamera" accept="image/*" capture="environment" 
+                           multiple class="input-file" style="display: none;">
+                    <button type="button" class="btn btn-primary btn-block" 
+                            onclick="document.getElementById('fPhotosCamera').click()">
+                        📷 Tomar foto con cámara
+                    </button>
                 </div>
+                
+                <!-- Botón para galería -->
+                <div class="photo-upload">
+                    <input type="file" id="fPhotosGallery" accept="image/*" 
+                           multiple class="input-file" style="display: none;">
+                    <button type="button" class="btn btn-secondary btn-block" 
+                            onclick="document.getElementById('fPhotosGallery').click()">
+                        ️ Seleccionar de galería
+                    </button>
+                </div>
+                
+                <!-- Vista previa de fotos -->
                 <div class="photo-preview" id="photoPreview"></div>
             </div>
 
@@ -118,7 +115,7 @@
 <!-- FILTROS Y REPORTE -->
 <section class="card">
     <div class="card-header">
-        <h3>📋 Reportes de patrullas</h3>
+        <h3> Reportes de patrullas</h3>
         <button class="btn btn-primary" onclick="generatePDF()">🖨️ Generar PDF</button>
     </div>
     <div class="card-body">
