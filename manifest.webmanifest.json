@@ -8,20 +8,20 @@
   "theme_color": "#0a1224",
   "orientation": "portrait",
   "scope": "/",
-  "lang": "es",
+  "lang": "es-PE",
   "categories": ["business", "productivity"],
   "icons": [
     {
-      "src": "/static/icon-192.PNG",
+      "src": "/static/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/static/icon-512.PNG",
+      "src": "/static/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }

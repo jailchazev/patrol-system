@@ -1,48 +1,62 @@
-// Service Worker para Sistema de Patrullas
-const CACHE_NAME = 'patrol-system-v1';
+const CACHE_NAME = 'patrol-system-v2';
+
 const urlsToCache = [
     '/',
-    '/login',
-    '/evidencia',
-    '/admin',
     '/static/css/style.css',
     '/static/js/app.js',
-    '/manifest.webmanifest'
+    '/manifest.webmanifest',
+    '/static/icon-192.png',
+    '/static/icon-512.png'
 ];
 
-// Instalar Service Worker
+// INSTALACIÓN
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => cache.addAll(urlsToCache))
-            .catch(err => console.log('Error cacheando:', err))
+            .then(() => self.skipWaiting())
+            .catch(err => console.error('Error cacheando:', err))
     );
 });
 
-// Activar Service Worker
+// ACTIVACIÓN
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
-                cacheNames.map(cacheName => {
-                    if (cacheName !== CACHE_NAME) {
-                        return caches.delete(cacheName);
-                    }
-                })
+                cacheNames
+                    .filter(cacheName => cacheName !== CACHE_NAME)
+                    .map(cacheName => caches.delete(cacheName))
             );
-        })
+        }).then(() => self.clients.claim())
     );
 });
 
-// Interceptar peticiones
+// PETICIONES
 self.addEventListener('fetch', event => {
+
+    // Solo manejar solicitudes GET
+    if (event.request.method !== 'GET') {
+        return;
+    }
+
     event.respondWith(
-        caches.match(event.request)
+        fetch(event.request)
             .then(response => {
-                if (response) {
-                    return response;
+
+                // Guardar una copia de recursos válidos
+                if (response && response.status === 200) {
+                    const responseClone = response.clone();
+
+                    caches.open(CACHE_NAME).then(cache => {
+                        cache.put(event.request, responseClone);
+                    });
                 }
-                return fetch(event.request);
+
+                return response;
+            })
+            .catch(() => {
+                return caches.match(event.request);
             })
     );
 });
