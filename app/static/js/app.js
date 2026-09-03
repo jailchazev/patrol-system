@@ -69,14 +69,24 @@ function getPeruDateTime() {
  */
 function peruTimeToUTC(localString) {
     if (!localString) {
-        // Si está vacío, usar la hora actual de Perú convertida a UTC
         return getPeruDateTime().toISOString();
     }
-    // 1. Forzamos que el string se interprete como UTC (ej: "2026-09-03T05:09:00Z")
-    const date = new Date(localString + ":00Z");
-    // 2. Le sumamos 5 horas para obtener el UTC real 
-    // (Ej: Si el usuario puso 05:09 AM en Perú, el UTC real es 10:09 AM)
+    
+    // El formato ahora es: "03/09/2026 01:07"
+    const parts = localString.split(' ');
+    const datePart = parts[0].split('/');
+    const timePart = parts[1].split(':');
+    
+    const day = parseInt(datePart[0]);
+    const month = parseInt(datePart[1]) - 1; // Mes es 0-indexado
+    const year = parseInt(datePart[2]);
+    const hours = parseInt(timePart[0]);
+    const minutes = parseInt(timePart[1]);
+    
+    // Crear fecha en UTC y sumar 5 horas para convertir Perú a UTC
+    const date = new Date(Date.UTC(year, month, day, hours, minutes, 0));
     date.setUTCHours(date.getUTCHours() + 5);
+    
     return date.toISOString();
 }
 
@@ -343,18 +353,24 @@ if (getEl('#evidenceForm')) {
     }
 
     window.resetForm = function() {
-        const evidenceForm = getEl('#evidenceForm');
-        if (evidenceForm) evidenceForm.reset();
-        const pBtns = getEls('.patrol-btn');
-        if (pBtns) pBtns.forEach(b => b.classList.remove('active'));
-        const fPatrol = getEl('#fPatrol');
-        if (fPatrol) fPatrol.value = '';
-        photoDataUrls = [];
-        editingId = null;
-        window.renderPhotos();
-        const fTimestamp = getEl('#fTimestamp');
-        if (fTimestamp) fTimestamp.value = toLocalInput(getPeruDateTime());
-    };
+    const evidenceForm = getEl('#evidenceForm');
+    if (evidenceForm) evidenceForm.reset();
+    const pBtns = getEls('.patrol-btn');
+    if (pBtns) pBtns.forEach(b => b.classList.remove('active'));
+    const fPatrol = getEl('#fPatrol');
+    if (fPatrol) fPatrol.value = '';
+    photoDataUrls = [];
+    editingId = null;
+    window.renderPhotos();
+    
+    // Actualizar fecha/hora automáticamente
+    const fTimestamp = getEl('#fTimestamp');
+    if (fTimestamp) {
+        const peruNow = getPeruDateTime();
+        const pad = (n) => String(n).padStart(2, '0');
+        fTimestamp.value = `${pad(peruNow.getUTCDate())}/${pad(peruNow.getUTCMonth()+1)}/${peruNow.getUTCFullYear()} ${pad(peruNow.getUTCHours())}:${pad(peruNow.getUTCMinutes())}`;
+    }
+};
 
     window.loadEvidences = async function() {
         const params = new URLSearchParams();
