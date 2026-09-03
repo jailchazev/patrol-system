@@ -37,7 +37,7 @@ function formatDate(iso) {
         const d = new Date(iso);
         
         // Restar 5 horas directamente al timestamp
-        const peruTimestamp = d.getTime() - (5 * 60 * 60 * 1000);
+        const peruTimestamp = d.getTime() - (10 * 60 * 60 * 1000);
         const peruDate = new Date(peruTimestamp);
         
         const pad = (n) => String(n).padStart(2, '0');
