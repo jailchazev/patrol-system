@@ -1,13 +1,14 @@
 """
 Generador de PDF profesional para evidencias de patrullas.
+Versión estable de producción con encabezado corporativo.
 """
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
-from reportlab.lib.colors import HexColor, black, white
+from reportlab.lib.colors import HexColor, black
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle, PageBreak
-from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER
+from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER, TA_LEFT
 from io import BytesIO
 from datetime import datetime, timedelta
 import base64
@@ -21,7 +22,7 @@ def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        topMargin=30*mm,
+        topMargin=45*mm,
         bottomMargin=20*mm,
         leftMargin=15*mm,
         rightMargin=15*mm
@@ -132,14 +133,13 @@ def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
         # Fecha actual Perú
         peru_now = datetime.utcnow() - timedelta(hours=5)
         fecha_str = peru_now.strftime('%d/%m/%Y')
-        pagina_str = f"Página {doc.page} de {len(evidences)}" if len(evidences) > 1 else f"Página {doc.page}"
+        pagina_str = f"Página {doc.page}"
         
         # Estilos
         estilo_titulo = ParagraphStyle('EstiloTitulo', fontSize=8, leading=10, alignment=TA_CENTER, fontName='Helvetica-Bold')
         estilo_subtitulo = ParagraphStyle('EstiloSubtitulo', fontSize=7, leading=9, alignment=TA_CENTER, fontName='Helvetica')
         estilo_titulo_grande = ParagraphStyle('EstiloTituloGrande', fontSize=10, leading=12, alignment=TA_CENTER, fontName='Helvetica-Bold')
         estilo_texto = ParagraphStyle('EstiloTexto', fontSize=8, alignment=TA_LEFT, fontName='Helvetica')
-        estilo_fecha_valor = ParagraphStyle('EstiloFechaValor', fontSize=8, alignment=TA_LEFT, fontName='Helvetica')
         
         # Logo (texto o imagen)
         logo_path = os.path.join(os.path.dirname(__file__), 'static', 'logo.png')
@@ -151,11 +151,7 @@ def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
         else:
             logo = Paragraph("<b>BESALCO | STRACON</b>", estilo_titulo)
         
-        # ESTRUCTURA CORRECTA DE LA TABLA (3 filas x 3 columnas)
-        # Fila 0: [Logo rowspan=3] | [SOLUCIONES...] | [Fecha: rowspan=2] [03/09/2026]
-        # Fila 1: [Logo continua] | [CONSORCIO...]     | [Fecha continua]
-        # Fila 2: [Logo continua] | [REPORTE SEMANAL colspan=2] | [Página 1]
-        
+        # ESTRUCTURA DE LA TABLA (3 filas x 3 columnas)
         header_data = [
             # Fila 0
             [logo, 
@@ -164,7 +160,7 @@ def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
             # Fila 1
             ['',
              Paragraph("CONSORCIO BESALCO STRACON<br/>(SEGURIDAD PATRIMONIAL)", estilo_subtitulo),
-             Paragraph(fecha_str, estilo_fecha_valor)],
+             Paragraph(fecha_str, estilo_texto)],
             # Fila 2
             ['',
              Paragraph(title, estilo_titulo_grande),
