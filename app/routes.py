@@ -6,6 +6,7 @@ from datetime import datetime
 from app import db
 from app.models import User, PatrolEvidence
 from app.pdf_generator import generate_evidence_pdf
+from flask import send_from_directory, current_app
 
 # ============ BLUEPRINTS ============
 auth_bp = Blueprint('auth', __name__)
@@ -302,3 +303,8 @@ def generate_pdf():
         as_attachment=True,
         download_name=f'evidencia_patrullas_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
     )
+
+    @main_bp.route('/sw.js')
+def service_worker():
+    """Sirve el Service Worker desde la raíz para que el alcance sea toda la app."""
+    return send_from_directory(current_app.static_folder, 'sw.js', mimetype='application/javascript')

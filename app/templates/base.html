@@ -69,7 +69,7 @@
 <script>
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/static/sw.js')
+        navigator.serviceWorker.register('/sw.js')
             .then(registration => {
                 console.log('✅ Service Worker registrado:', registration.scope);
             })
@@ -78,6 +78,39 @@ if ('serviceWorker' in navigator) {
             });
     });
 }
+</script>
+
+<!-- Botón flotante de instalación -->
+<button id="installAppBtn" style="display: none; position: fixed; bottom: 20px; right: 20px; background: #f59e0b; color: #0a1224; border: none; padding: 12px 20px; border-radius: 30px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 9999; cursor: pointer;">
+    📲 Instalar App
+</button>
+
+<script>
+    let deferredPrompt;
+    const installBtn = document.getElementById('installAppBtn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault(); // Evita el banner automático de Chrome
+        deferredPrompt = e;
+        installBtn.style.display = 'block'; // Muestra nuestro botón
+    });
+
+    installBtn.addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt(); // Muestra el diálogo nativo de instalación
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                installBtn.style.display = 'none';
+            }
+            deferredPrompt = null;
+        }
+    });
+
+    // Ocultar botón si ya está instalada
+    window.addEventListener('appinstalled', () => {
+        installBtn.style.display = 'none';
+        deferredPrompt = null;
+    });
 </script>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
