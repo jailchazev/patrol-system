@@ -33,20 +33,44 @@ async function api(url, options = {}) {
  */
 function formatDate(iso) {
     if (!iso) return '';
-
     try {
         const d = new Date(iso);
-
-        return d.toLocaleString('es-PE', {
-            timeZone: 'America/Lima',
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
-
+        
+        // Obtener componentes UTC
+        const utcYear = d.getUTCFullYear();
+        const utcMonth = d.getUTCMonth();
+        const utcDay = d.getUTCDate();
+        let utcHours = d.getUTCHours();
+        const utcMinutes = d.getUTCMinutes();
+        
+        // Restar 5 horas para Perú (UTC-5)
+        let peruHours = utcHours - 5;
+        let peruDay = utcDay;
+        let peruMonth = utcMonth;
+        let peruYear = utcYear;
+        
+        // Ajustar si pasa a día anterior
+        if (peruHours < 0) {
+            peruHours += 24;
+            peruDay -= 1;
+            if (peruDay < 1) {
+                peruMonth -= 1;
+                if (peruMonth < 0) {
+                    peruMonth = 11;
+                    peruYear -= 1;
+                }
+                // Días en el mes anterior (simplificado)
+                const daysInMonth = new Date(peruYear, peruMonth + 1, 0).getDate();
+                peruDay = daysInMonth;
+            }
+        }
+        
+        // Formatear
+        const pad = (n) => String(n).padStart(2, '0');
+        const ampm = peruHours >= 12 ? 'p. m.' : 'a. m.';
+        const displayHours = peruHours % 12 || 12;
+        
+        return `${pad(peruDay)}/${pad(peruMonth + 1)}/${peruYear}, ${pad(displayHours)}:${pad(utcMinutes)} ${ampm}`;
     } catch (e) {
         console.error('Error formateando fecha:', e);
         return iso;
