@@ -28,7 +28,7 @@ async function api(url, options = {}) {
 }
 
 /**
- * Formatear fecha ISO a formato Perú (UTC-5)
+ * Formatear fecha ISO a formato Perú (UTC-5) para mostrar en el historial
  */
 function formatDate(iso) {
     if (!iso) return '';
@@ -53,11 +53,17 @@ function formatDate(iso) {
     }
 }
 
+/**
+ * Convierte un objeto Date a formato válido para input datetime-local (YYYY-MM-DDThh:mm)
+ */
 function toLocalInput(dateObj) {
     const pad = (n) => String(n).padStart(2, '0');
     return `${dateObj.getFullYear()}-${pad(dateObj.getMonth()+1)}-${pad(dateObj.getDate())}T${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`;
 }
 
+/**
+ * Obtiene la fecha y hora actual en Perú (UTC-5)
+ */
 function getPeruDateTime() {
     const now = new Date();
     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
@@ -65,26 +71,20 @@ function getPeruDateTime() {
 }
 
 /**
- * Convierte una cadena de fecha local (del input) a UTC, asumiendo que la entrada es hora de Perú (UTC-5)
+ * Convierte una cadena de fecha local (del input datetime-local) a UTC, 
+ * asumiendo que la entrada representa hora de Perú (UTC-5)
  */
 function peruTimeToUTC(localString) {
     if (!localString) {
         return getPeruDateTime().toISOString();
     }
+    // localString es "YYYY-MM-DDThh:mm"
+    const [datePart, timePart] = localString.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours, minutes] = timePart.split(':').map(Number);
     
-    // El formato ahora es: "03/09/2026 01:07"
-    const parts = localString.split(' ');
-    const datePart = parts[0].split('/');
-    const timePart = parts[1].split(':');
-    
-    const day = parseInt(datePart[0]);
-    const month = parseInt(datePart[1]) - 1; // Mes es 0-indexado
-    const year = parseInt(datePart[2]);
-    const hours = parseInt(timePart[0]);
-    const minutes = parseInt(timePart[1]);
-    
-    // Crear fecha en UTC y sumar 5 horas para convertir Perú a UTC
-    const date = new Date(Date.UTC(year, month, day, hours, minutes, 0));
+    // Crear fecha en UTC y sumar 5 horas para convertir Perú a UTC real
+    const date = new Date(Date.UTC(year, month - 1, day, hours, minutes));
     date.setUTCHours(date.getUTCHours() + 5);
     
     return date.toISOString();
@@ -353,24 +353,22 @@ if (getEl('#evidenceForm')) {
     }
 
     window.resetForm = function() {
-    const evidenceForm = getEl('#evidenceForm');
-    if (evidenceForm) evidenceForm.reset();
-    const pBtns = getEls('.patrol-btn');
-    if (pBtns) pBtns.forEach(b => b.classList.remove('active'));
-    const fPatrol = getEl('#fPatrol');
-    if (fPatrol) fPatrol.value = '';
-    photoDataUrls = [];
-    editingId = null;
-    window.renderPhotos();
-    
-    // Actualizar fecha/hora automáticamente
-    const fTimestamp = getEl('#fTimestamp');
-    if (fTimestamp) {
-        const peruNow = getPeruDateTime();
-        const pad = (n) => String(n).padStart(2, '0');
-        fTimestamp.value = `${pad(peruNow.getUTCDate())}/${pad(peruNow.getUTCMonth()+1)}/${peruNow.getUTCFullYear()} ${pad(peruNow.getUTCHours())}:${pad(peruNow.getUTCMinutes())}`;
-    }
-};
+        const evidenceForm = getEl('#evidenceForm');
+        if (evidenceForm) evidenceForm.reset();
+        const pBtns = getEls('.patrol-btn');
+        if (pBtns) pBtns.forEach(b => b.classList.remove('active'));
+        const fPatrol = getEl('#fPatrol');
+        if (fPatrol) fPatrol.value = '';
+        photoDataUrls = [];
+        editingId = null;
+        window.renderPhotos();
+        
+        // Actualizar fecha/hora automáticamente con formato correcto para datetime-local
+        const fTimestamp = getEl('#fTimestamp');
+        if (fTimestamp) {
+            fTimestamp.value = toLocalInput(getPeruDateTime());
+        }
+    };
 
     window.loadEvidences = async function() {
         const params = new URLSearchParams();
