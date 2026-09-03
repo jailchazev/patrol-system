@@ -1,9 +1,9 @@
 /* ============ UTILS ============ */
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => document.querySelectorAll(sel);
+const getEl = (sel) => document.querySelector(sel);
+const getEls = (sel) => document.querySelectorAll(sel);
 
 function toast(msg, type = 'info') {
-    const container = $('#toastContainer');
+    const container = getEl('#toastContainer');
     if (!container) return;
     const t = document.createElement('div');
     t.className = `toast ${type}`;
@@ -66,13 +66,13 @@ function getPeruDateTime() {
 
 /* ============ SIDEBAR ============ */
 document.addEventListener('DOMContentLoaded', () => {
-    const sidebar = $('#sidebar');
-    const toggle = $('#menuToggle');
-    const close = $('#sidebarClose');
+    const sidebar = getEl('#sidebar');
+    const toggle = getEl('#menuToggle');
+    const close = getEl('#sidebarClose');
     if (toggle) toggle.onclick = () => sidebar.classList.add('open');
     if (close) close.onclick = () => sidebar.classList.remove('open');
 
-    const today = $('#todayLabel');
+    const today = getEl('#todayLabel');
     if (today) {
         today.textContent = getPeruDateTime().toLocaleDateString('es-PE', { 
             weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' 
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ============================================================
    ADMIN - USUARIOS
    ============================================================ */
-if ($('#usersTable')) {
+if (getEl('#usersTable')) {
     let allUsers = [];
 
     async function loadUsers() {
@@ -94,23 +94,23 @@ if ($('#usersTable')) {
     }
 
     function renderStats() {
-        $('#statTotal').textContent = allUsers.length;
-        $('#statAdmin').textContent = allUsers.filter(u => u.role === 'admin').length;
-        $('#statSup').textContent = allUsers.filter(u => u.role === 'supervisor').length;
-        $('#statGuard').textContent = allUsers.filter(u => u.role === 'guardia').length;
+        getEl('#statTotal').textContent = allUsers.length;
+        getEl('#statAdmin').textContent = allUsers.filter(u => u.role === 'admin').length;
+        getEl('#statSup').textContent = allUsers.filter(u => u.role === 'supervisor').length;
+        getEl('#statGuard').textContent = allUsers.filter(u => u.role === 'guardia').length;
     }
 
     function renderUnitFilter() {
         const units = [...new Set(allUsers.map(u => u.unit).filter(Boolean))];
-        const sel = $('#filterUnit');
+        const sel = getEl('#filterUnit');
         sel.innerHTML = '<option value="">Todas las unidades</option>' +
             units.map(u => `<option value="${u}">${u}</option>`).join('');
     }
 
     function renderUsers() {
-        const search = ($('#searchInput').value || '').toLowerCase();
-        const role = $('#filterRole').value;
-        const unit = $('#filterUnit').value;
+        const search = (getEl('#searchInput').value || '').toLowerCase();
+        const role = getEl('#filterRole').value;
+        const unit = getEl('#filterUnit').value;
 
         const filtered = allUsers.filter(u => {
             if (search && !u.name.toLowerCase().includes(search) && !u.code.toLowerCase().includes(search)) return false;
@@ -119,7 +119,7 @@ if ($('#usersTable')) {
             return true;
         });
 
-        const tbody = $('#usersTable');
+        const tbody = getEl('#usersTable');
         if (!filtered.length) {
             tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Sin usuarios</td></tr>';
             return;
@@ -143,42 +143,42 @@ if ($('#usersTable')) {
     }
 
     window.openUserModal = function(user = null) {
-        $('#userModal').classList.add('open');
-        $('#userForm').reset();
-        $('#userId').value = '';
+        getEl('#userModal').classList.add('open');
+        getEl('#userForm').reset();
+        getEl('#userId').value = '';
         if (user) {
-            $('#modalTitle').textContent = 'Editar usuario';
-            $('#userId').value = user.id;
-            $('#fCode').value = user.code;
-            $('#fName').value = user.name;
-            $('#fUnit').value = user.unit;
-            $('#fPost').value = user.post;
-            $('#fRole').value = user.role;
-            $('#fShift').value = user.shift;
-            $('#fPassword').required = false;
-            $('#pwdHint').textContent = '(dejar vacío = no cambiar)';
+            getEl('#modalTitle').textContent = 'Editar usuario';
+            getEl('#userId').value = user.id;
+            getEl('#fCode').value = user.code;
+            getEl('#fName').value = user.name;
+            getEl('#fUnit').value = user.unit;
+            getEl('#fPost').value = user.post;
+            getEl('#fRole').value = user.role;
+            getEl('#fShift').value = user.shift;
+            getEl('#fPassword').required = false;
+            getEl('#pwdHint').textContent = '(dejar vacío = no cambiar)';
         } else {
-            $('#modalTitle').textContent = 'Nuevo usuario';
-            $('#fPassword').required = true;
-            $('#pwdHint').textContent = '(mín. 6)';
+            getEl('#modalTitle').textContent = 'Nuevo usuario';
+            getEl('#fPassword').required = true;
+            getEl('#pwdHint').textContent = '(mín. 6)';
         }
     };
 
-    window.closeUserModal = () => $('#userModal').classList.remove('open');
-    window.editUser = (id) => { const u = allUsers.find(x => x.id === id); if (u) openUserModal(u); };
+    window.closeUserModal = () => getEl('#userModal').classList.remove('open');
+    window.editUser = (id) => { const u = allUsers.find(x => x.id === id); if (u) window.openUserModal(u); };
     window.deleteUser = async (id, name) => {
         if (!confirm(`¿Eliminar al usuario "${name}"?`)) return;
         try { await api(`/api/users/${id}`, { method: 'DELETE' }); toast('Usuario eliminado', 'success'); loadUsers(); } catch (e) {}
     };
 
-    $('#userForm').onsubmit = async (e) => {
+    getEl('#userForm').onsubmit = async (e) => {
         e.preventDefault();
-        const id = $('#userId').value;
+        const id = getEl('#userId').value;
         const payload = {
-            code: $('#fCode').value, name: $('#fName').value, unit: $('#fUnit').value,
-            post: $('#fPost').value, role: $('#fRole').value, shift: $('#fShift').value
+            code: getEl('#fCode').value, name: getEl('#fName').value, unit: getEl('#fUnit').value,
+            post: getEl('#fPost').value, role: getEl('#fRole').value, shift: getEl('#fShift').value
         };
-        const pwd = $('#fPassword').value;
+        const pwd = getEl('#fPassword').value;
         if (pwd) payload.password = pwd;
 
         try {
@@ -190,13 +190,13 @@ if ($('#usersTable')) {
                 await api('/api/users', { method: 'POST', body: JSON.stringify(payload) });
                 toast('Usuario creado', 'success');
             }
-            closeUserModal();
+            window.closeUserModal();
             loadUsers();
         } catch (e) {}
     };
 
     ['searchInput', 'filterRole', 'filterUnit'].forEach(id => {
-        const el = $(`#${id}`);
+        const el = getEl(`#${id}`);
         if (el) el.addEventListener('input', renderUsers);
     });
 
@@ -206,7 +206,7 @@ if ($('#usersTable')) {
 /* ============================================================
    EVIDENCIA DE PATRULLAS
    ============================================================ */
-if ($('#evidenceForm')) {
+if (getEl('#evidenceForm')) {
     let currentLocation = null;
     let photoDataUrls = [];
     let editingId = null;
@@ -214,12 +214,12 @@ if ($('#evidenceForm')) {
     async function loadSession() {
         try {
             const u = await api('/api/session');
-            const autoUser = $('#autoUser'); if (autoUser) autoUser.textContent = u.name || '—';
-            const autoUnit = $('#autoUnit'); if (autoUnit) autoUnit.textContent = u.unit || '—';
-            const autoRoleLabel = $('#autoRoleLabel');
+            const autoUser = getEl('#autoUser'); if (autoUser) autoUser.textContent = u.name || '—';
+            const autoUnit = getEl('#autoUnit'); if (autoUnit) autoUnit.textContent = u.unit || '—';
+            const autoRoleLabel = getEl('#autoRoleLabel');
             if (autoRoleLabel && u.role) autoRoleLabel.textContent = u.role.charAt(0).toUpperCase() + u.role.slice(1);
             
-            const fTimestamp = $('#fTimestamp');
+            const fTimestamp = getEl('#fTimestamp');
             if (fTimestamp) fTimestamp.value = toLocalInput(getPeruDateTime());
             console.log('✅ Sesión cargada:', u);
         } catch (error) {
@@ -228,7 +228,7 @@ if ($('#evidenceForm')) {
     }
 
     window.getGPS = function() {
-        const autoGps = $('#autoGps');
+        const autoGps = getEl('#autoGps');
         if (autoGps) autoGps.textContent = 'Obteniendo...';
         if (!navigator.geolocation) { if (autoGps) autoGps.textContent = 'No disponible'; return; }
         navigator.geolocation.getCurrentPosition(
@@ -241,13 +241,13 @@ if ($('#evidenceForm')) {
         );
     };
 
-    const patrolBtns = $$('.patrol-btn');
+    const patrolBtns = getEls('.patrol-btn');
     if (patrolBtns.length > 0) {
         patrolBtns.forEach(btn => {
             btn.onclick = function() {
                 patrolBtns.forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
-                const fPatrol = $('#fPatrol');
+                const fPatrol = getEl('#fPatrol');
                 if (fPatrol) fPatrol.value = this.dataset.patrol;
             };
         });
@@ -265,18 +265,18 @@ if ($('#evidenceForm')) {
         });
     }
 
-    const fPhotosCamera = $('#fPhotosCamera');
+    const fPhotosCamera = getEl('#fPhotosCamera');
     if (fPhotosCamera) {
         fPhotosCamera.onchange = (e) => { handlePhotoSelect(e.target.files); e.target.value = ''; };
     }
 
-    const fPhotosGallery = $('#fPhotosGallery');
+    const fPhotosGallery = getEl('#fPhotosGallery');
     if (fPhotosGallery) {
         fPhotosGallery.onchange = (e) => { handlePhotoSelect(e.target.files); e.target.value = ''; };
     }
 
     window.renderPhotos = function() {
-        const container = $('#photoPreview');
+        const container = getEl('#photoPreview');
         if (!container) return;
         if (photoDataUrls.length === 0) { container.innerHTML = ''; return; }
         container.innerHTML = photoDataUrls.map((src, i) => `
@@ -292,22 +292,22 @@ if ($('#evidenceForm')) {
         window.renderPhotos();
     };
 
-    const evidenceForm = $('#evidenceForm');
+    const evidenceForm = getEl('#evidenceForm');
     if (evidenceForm) {
         evidenceForm.onsubmit = async (e) => {
             e.preventDefault();
             if (!photoDataUrls.length) { toast('Adjunta al menos una foto', 'error'); return; }
 
             const payload = {
-                patrol_num: $('#fPatrol')?.value || '',
-                paquete: $('#fPaquete')?.value || '',
-                progresiva: $('#fProgresiva')?.value || '',
-                margen: $('#fMargen')?.value || '',
-                zona: $('#fZona')?.value || '',
-                descripcion: $('#fDescripcion')?.value || '',
+                patrol_num: getEl('#fPatrol')?.value || '',
+                paquete: getEl('#fPaquete')?.value || '',
+                progresiva: getEl('#fProgresiva')?.value || '',
+                margen: getEl('#fMargen')?.value || '',
+                zona: getEl('#fZona')?.value || '',
+                descripcion: getEl('#fDescripcion')?.value || '',
                 photos: photoDataUrls,
                 location: currentLocation,
-                timestamp: $('#fTimestamp')?.value ? new Date($('#fTimestamp').value).toISOString() : null
+                timestamp: getEl('#fTimestamp')?.value ? new Date(getEl('#fTimestamp').value).toISOString() : null
             };
 
             try {
@@ -327,25 +327,25 @@ if ($('#evidenceForm')) {
     }
 
     window.resetForm = function() {
-        const evidenceForm = $('#evidenceForm');
+        const evidenceForm = getEl('#evidenceForm');
         if (evidenceForm) evidenceForm.reset();
-        const patrolBtns = $$('.patrol-btn');
-        if (patrolBtns) patrolBtns.forEach(b => b.classList.remove('active'));
-        const fPatrol = $('#fPatrol');
+        const pBtns = getEls('.patrol-btn');
+        if (pBtns) pBtns.forEach(b => b.classList.remove('active'));
+        const fPatrol = getEl('#fPatrol');
         if (fPatrol) fPatrol.value = '';
         photoDataUrls = [];
         editingId = null;
         window.renderPhotos();
-        const fTimestamp = $('#fTimestamp');
+        const fTimestamp = getEl('#fTimestamp');
         if (fTimestamp) fTimestamp.value = toLocalInput(getPeruDateTime());
     };
 
     window.loadEvidences = async function() {
         const params = new URLSearchParams();
-        const filterPatrol = $('#filterPatrol');
-        const filterFrom = $('#filterFrom');
-        const filterTo = $('#filterTo');
-        const filterZona = $('#filterZona');
+        const filterPatrol = getEl('#filterPatrol');
+        const filterFrom = getEl('#filterFrom');
+        const filterTo = getEl('#filterTo');
+        const filterZona = getEl('#filterZona');
         
         if (filterPatrol?.value) params.set('patrol', filterPatrol.value);
         if (filterFrom?.value) params.set('from', new Date(filterFrom.value).toISOString());
@@ -362,7 +362,7 @@ if ($('#evidenceForm')) {
     };
 
     function renderEvidenceStats(list) {
-        const container = $('#evidenceStats');
+        const container = getEl('#evidenceStats');
         if (!container) return;
         const total = list.length;
         const byPatrol = {};
@@ -374,7 +374,7 @@ if ($('#evidenceForm')) {
     }
 
     function renderEvidenceList(list) {
-        const container = $('#evidenceList');
+        const container = getEl('#evidenceList');
         if (!container) return;
         if (!list.length) {
             container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>Sin registros aún</p></div>';
@@ -409,21 +409,21 @@ if ($('#evidenceForm')) {
             if (!e) return;
             editingId = id;
             
-            const fPatrol = $('#fPatrol'); if (fPatrol) fPatrol.value = e.patrol_num;
-            const patrolBtns = $$('.patrol-btn');
-            if (patrolBtns) patrolBtns.forEach(b => b.classList.toggle('active', b.dataset.patrol === e.patrol_num));
+            const fPatrol = getEl('#fPatrol'); if (fPatrol) fPatrol.value = e.patrol_num;
+            const pBtns = getEls('.patrol-btn');
+            if (pBtns) pBtns.forEach(b => b.classList.toggle('active', b.dataset.patrol === e.patrol_num));
             
-            const fPaquete = $('#fPaquete'); if (fPaquete) fPaquete.value = e.paquete;
-            const fProgresiva = $('#fProgresiva'); if (fProgresiva) fProgresiva.value = e.progresiva;
-            const fMargen = $('#fMargen'); if (fMargen) fMargen.value = e.margen;
-            const fZona = $('#fZona'); if (fZona) fZona.value = e.zona;
-            const fDescripcion = $('#fDescripcion'); if (fDescripcion) fDescripcion.value = e.descripcion;
+            const fPaquete = getEl('#fPaquete'); if (fPaquete) fPaquete.value = e.paquete;
+            const fProgresiva = getEl('#fProgresiva'); if (fProgresiva) fProgresiva.value = e.progresiva;
+            const fMargen = getEl('#fMargen'); if (fMargen) fMargen.value = e.margen;
+            const fZona = getEl('#fZona'); if (fZona) fZona.value = e.zona;
+            const fDescripcion = getEl('#fDescripcion'); if (fDescripcion) fDescripcion.value = e.descripcion;
             
             photoDataUrls = [...(e.photos || [])];
             window.renderPhotos();
             
             if (e.timestamp) {
-                const fTimestamp = $('#fTimestamp');
+                const fTimestamp = getEl('#fTimestamp');
                 if (fTimestamp) {
                     const utcDate = new Date(e.timestamp);
                     const peruDate = new Date(utcDate.getTime() - (5 * 60 * 60 * 1000));
@@ -446,10 +446,10 @@ if ($('#evidenceForm')) {
 
     window.generatePDF = async function() {
         const params = new URLSearchParams();
-        const filterPatrol = $('#filterPatrol');
-        const filterFrom = $('#filterFrom');
-        const filterTo = $('#filterTo');
-        const filterZona = $('#filterZona');
+        const filterPatrol = getEl('#filterPatrol');
+        const filterFrom = getEl('#filterFrom');
+        const filterTo = getEl('#filterTo');
+        const filterZona = getEl('#filterZona');
         
         if (filterPatrol?.value) params.set('patrol', filterPatrol.value);
         if (filterFrom?.value) params.set('from', new Date(filterFrom.value).toISOString());
