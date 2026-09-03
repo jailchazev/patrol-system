@@ -1,25 +1,27 @@
 """
-Generador de PDF para evidencias de patrullas.
+Generador de PDF profesional para evidencias de patrullas.
 """
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
-from reportlab.lib.colors import HexColor, black
+from reportlab.lib.colors import HexColor, black, white
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle, PageBreak
 from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER
 from io import BytesIO
 from datetime import datetime, timedelta
 import base64
+import os
 
 
 def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
+    """Genera PDF con encabezado corporativo tipo tabla."""
     buffer = BytesIO()
     
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        topMargin=40*mm,
+        topMargin=30*mm,
         bottomMargin=20*mm,
         leftMargin=15*mm,
         rightMargin=15*mm
@@ -113,18 +115,95 @@ def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
             if idx < len(evidences) - 1:
                 story.append(PageBreak())
     
-    # Encabezado simple
-    def add_header(canvas, doc):
+    def add_header_footer(canvas, doc):
         canvas.saveState()
-        canvas.setFont('Helvetica-Bold', 12)
-        canvas.drawCentredString(A4[0]/2, A4[1] - 20*mm, title)
-        canvas.setFont('Helvetica', 8)
-        fecha = datetime.utcnow() - timedelta(hours=5)
-        canvas.drawCentredString(A4[0]/2, A4[1] - 25*mm, f"Fecha: {fecha.strftime('%d/%m/%Y')} - Página {doc.page}")
-        canvas.line(15*mm, A4[1] - 28*mm, A4[0]-15*mm, A4[1] - 28*mm)
+        
+        # ========== ENCABEZADO TIPO TABLA ==========
+        header_y = A4[1] - 15*mm  # Posición vertical del encabezado
+        
+        # Ancho total disponible
+        page_width = A4[0]
+        left_margin = 15*mm
+        right_margin = 15*mm
+        available_width = page_width - left_margin - right_margin
+        
+        # Anchos de columnas: Logo | Texto central | Fecha/Página
+        col_logo = 35*mm
+        col_fecha = 35*mm
+        col_centro = available_width - col_logo - col_fecha
+        
+        # Obtener fecha actual en Perú
+        peru_now = datetime.utcnow() - timedelta(hours=5)
+        fecha_str = peru_now.strftime('%d/%m/%Y')
+        pagina_str = f"Página {doc.page}"
+        
+        # Estilos de texto para el encabezado
+        estilo_titulo = ParagraphStyle('EstiloTitulo', fontSize=8, leading=10, alignment=TA_CENTER, fontName='Helvetica-Bold')
+        estilo_subtitulo = ParagraphStyle('EstiloSubtitulo', fontSize=7, leading=9, alignment=TA_CENTER, fontName='Helvetica')
+        estilo_titulo_grande = ParagraphStyle('EstiloTituloGrande', fontSize=10, leading=12, alignment=TA_CENTER, fontName='Helvetica-Bold')
+        estilo_fecha_label = ParagraphStyle('EstiloFechaLabel', fontSize=8, alignment=TA_CENTER, fontName='Helvetica')
+        estilo_fecha_valor = ParagraphStyle('EstiloFechaValor', fontSize=8, alignment=TA_CENTER, fontName='Helvetica')
+        
+        # Intentar cargar el logo
+        logo_path = os.path.join(os.path.dirname(__file__), 'static', 'logo.png')
+        if os.path.exists(logo_path):
+            logo = Image(logo_path, width=30*mm, height=12*mm)
+        else:
+            # Si no hay logo, usar texto
+            logo = Paragraph("<b>BESALCO | STRACON</b>", estilo_titulo)
+        
+        # Fila 1: Logo + Texto superior + Fecha
+        fila1 = [
+            logo,
+            Paragraph("SOLUCIONES INTEGRALES - PAQUETE 1<br/>QUEBRADAS SAN IDELFONSO Y SAN CARLOS", estilo_titulo),
+            Paragraph(f"Fecha:<br/>{fecha_str}", estilo_fecha_label)
+        ]
+        
+        # Fila 2: (logo vacío) + Texto consorcio + Página
+        fila2 = [
+            '',
+            Paragraph("CONSORCIO BESALCO STRACON<br/>(SEGURIDAD PATRIMONIAL)", estilo_subtitulo),
+            Paragraph(pagina_str, estilo_fecha_label)
+        ]
+        
+        # Fila 3: (logo vacío) + Título del reporte + (vacío)
+        fila3 = [
+            '',
+            Paragraph(title, estilo_titulo_grande),
+            ''
+        ]
+        
+        # Crear tabla con 3 filas y 3 columnas
+        header_table = Table([fila1, fila2, fila3], colWidths=[col_logo, col_centro, col_fecha])
+        header_table.setStyle(TableStyle([
+            # Bordes de todas las celdas
+            ('GRID', (0, 0), (-1, -1), 0.5, black),
+            # Alineación vertical centrada
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            # Alineación horizontal
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),  # Logo centrado
+            ('ALIGN', (1, 0), (1, -1), 'CENTER'),  # Texto central centrado
+            ('ALIGN', (2, 0), (2, -1), 'CENTER'),  # Fecha centrada
+            # Padding
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('LEFTPADDING', (0, 0), (-1, -1), 3),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 3),
+        ]))
+        
+        # Dibujar la tabla del encabezado
+        header_table.wrapOn(canvas, available_width, 30*mm)
+        header_table.drawOn(canvas, left_margin, header_y - 25*mm)
+        
+        # ========== PIE DE PÁGINA ==========
+        footer_y = 12*mm
+        canvas.setFont('Helvetica', 7)
+        canvas.setFillColor(HexColor('#666666'))
+        canvas.drawCentredString(A4[0]/2, footer_y, f"Generado el {peru_now.strftime('%d/%m/%Y %H:%M')} - Sistema de Evidencia de Patrullas")
+        
         canvas.restoreState()
     
-    doc.build(story, onFirstPage=add_header, onLaterPages=add_header)
+    doc.build(story, onFirstPage=add_header_footer, onLaterPages=add_header_footer)
     
     buffer.seek(0)
     return buffer
