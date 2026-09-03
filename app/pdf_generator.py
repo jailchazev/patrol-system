@@ -1,6 +1,6 @@
 """
 Generador de PDF profesional para evidencias de patrullas.
-Versión estable de producción con encabezado corporativo.
+Versión final con encabezado corporativo exacto.
 """
 
 from reportlab.lib.pagesizes import A4
@@ -125,72 +125,102 @@ def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
         right_margin = 15*mm
         available_width = page_width - left_margin - right_margin
         
-        # Anchos de columnas: Logo | Centro | Fecha
-        col_logo = 35*mm
-        col_fecha = 35*mm
-        col_centro = available_width - col_logo - col_fecha
+        # ESTRUCTURA DE 5 COLUMNAS:
+        # Logo | Texto Centro 1 | Texto Centro 2 | Label Fecha | Valor Fecha
+        col_logo = 30*mm
+        col_centro_1 = 50*mm
+        col_centro_2 = 50*mm
+        col_fecha_label = 20*mm
+        col_fecha_valor = 30*mm
         
         # Fecha actual Perú
         peru_now = datetime.utcnow() - timedelta(hours=5)
         fecha_str = peru_now.strftime('%d/%m/%Y')
-        pagina_str = f"Página {doc.page}"
+        total_pages = max(1, (len(evidences) + evidences_per_page - 1) // evidences_per_page)
+        pagina_str = f"Página {doc.page} de {total_pages}"
         
         # Estilos
         estilo_titulo = ParagraphStyle('EstiloTitulo', fontSize=8, leading=10, alignment=TA_CENTER, fontName='Helvetica-Bold')
         estilo_subtitulo = ParagraphStyle('EstiloSubtitulo', fontSize=7, leading=9, alignment=TA_CENTER, fontName='Helvetica')
         estilo_titulo_grande = ParagraphStyle('EstiloTituloGrande', fontSize=10, leading=12, alignment=TA_CENTER, fontName='Helvetica-Bold')
         estilo_texto = ParagraphStyle('EstiloTexto', fontSize=8, alignment=TA_LEFT, fontName='Helvetica')
+        estilo_texto_center = ParagraphStyle('EstiloTextoCenter', fontSize=8, alignment=TA_CENTER, fontName='Helvetica')
         
         # Logo (texto o imagen)
         logo_path = os.path.join(os.path.dirname(__file__), 'static', 'logo.png')
         if os.path.exists(logo_path):
             try:
-                logo = Image(logo_path, width=30*mm, height=15*mm)
+                logo = Image(logo_path, width=28*mm, height=10*mm)
             except:
                 logo = Paragraph("<b>BESALCO | STRACON</b>", estilo_titulo)
         else:
             logo = Paragraph("<b>BESALCO | STRACON</b>", estilo_titulo)
         
-        # ESTRUCTURA DE LA TABLA (3 filas x 3 columnas)
+        # ESTRUCTURA DE 5 COLUMNAS x 3 FILAS
         header_data = [
-            # Fila 0
+            # Fila 0: Logo | Texto superior (colspan 2) | "Fecha:" | Valor fecha
             [logo, 
              Paragraph("SOLUCIONES INTEGRALES - PAQUETE 1<br/>QUEBRADAS SAN IDELFONSO Y SAN CARLOS", estilo_titulo),
-             Paragraph("Fecha:", estilo_texto)],
-            # Fila 1
+             '',  # placeholder para colspan
+             Paragraph("Fecha:", estilo_texto),
+             Paragraph(fecha_str, estilo_texto_center)],
+            
+            # Fila 1: Logo continúa | Texto medio (colspan 2) | Fecha continúa | Valor continúa
             ['',
              Paragraph("CONSORCIO BESALCO STRACON<br/>(SEGURIDAD PATRIMONIAL)", estilo_subtitulo),
-             Paragraph(fecha_str, estilo_texto)],
-            # Fila 2
+             '',
+             '',
+             ''],
+            
+            # Fila 2: Logo continúa | Título (colspan 2) | Página (colspan 2)
             ['',
              Paragraph(title, estilo_titulo_grande),
-             Paragraph(pagina_str, estilo_texto)]
+             '',
+             Paragraph(pagina_str, estilo_texto_center),
+             '']
         ]
         
         # Crear tabla
-        header_table = Table(header_data, colWidths=[col_logo, col_centro, col_fecha], rowHeights=[12*mm, 10*mm, 10*mm])
+        header_table = Table(
+            header_data, 
+            colWidths=[col_logo, col_centro_1, col_centro_2, col_fecha_label, col_fecha_valor],
+            rowHeights=[12*mm, 10*mm, 10*mm]
+        )
         
         # Aplicar estilos con SPANS CORRECTOS
         header_table.setStyle(TableStyle([
-            # Bordes
+            # Bordes de todas las celdas
             ('GRID', (0, 0), (-1, -1), 0.5, black),
             
-            # SPAN DEL LOGO: Columna 0, Filas 0-2 (ocupa 3 filas)
+            # SPAN DEL LOGO: Columna 0, Filas 0-2
             ('SPAN', (0, 0), (0, 2)),
             
-            # SPAN DE FECHA: Columna 2, Filas 0-1 (ocupa 2 filas)
-            ('SPAN', (2, 0), (2, 1)),
+            # SPAN TEXTO FILA 0: Columnas 1-2, Fila 0
+            ('SPAN', (1, 0), (2, 0)),
             
-            # SPAN DEL TITULO: Columnas 1-2, Fila 2 (ocupa 2 columnas)
+            # SPAN TEXTO FILA 1: Columnas 1-2, Fila 1
+            ('SPAN', (1, 1), (2, 1)),
+            
+            # SPAN FECHA LABEL: Columna 3, Filas 0-1
+            ('SPAN', (3, 0), (3, 1)),
+            
+            # SPAN FECHA VALOR: Columna 4, Filas 0-1
+            ('SPAN', (4, 0), (4, 1)),
+            
+            # SPAN TÍTULO FILA 2: Columnas 1-2, Fila 2
             ('SPAN', (1, 2), (2, 2)),
+            
+            # SPAN PÁGINA FILA 2: Columnas 3-4, Fila 2
+            ('SPAN', (3, 2), (4, 2)),
             
             # Alineación vertical
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             
             # Alineación horizontal
-            ('ALIGN', (0, 0), (0, -1), 'CENTER'),   # Logo centrado
-            ('ALIGN', (1, 0), (1, -1), 'CENTER'),   # Texto centro centrado
-            ('ALIGN', (2, 0), (2, -1), 'LEFT'),     # Fecha alineada izquierda
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),    # Logo centrado
+            ('ALIGN', (1, 0), (2, -1), 'CENTER'),    # Texto central centrado
+            ('ALIGN', (3, 0), (3, -1), 'RIGHT'),     # Label "Fecha:" alineado derecha
+            ('ALIGN', (4, 0), (4, -1), 'CENTER'),    # Valor fecha centrado
             
             # Padding
             ('TOPPADDING', (0, 0), (-1, -1), 2),
