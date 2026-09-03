@@ -118,84 +118,97 @@ def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
     def add_header_footer(canvas, doc):
         canvas.saveState()
         
-        # ========== ENCABEZADO TIPO TABLA ==========
-        header_y = A4[1] - 15*mm  # Posición vertical del encabezado
-        
-        # Ancho total disponible
+        # Dimensiones
         page_width = A4[0]
         left_margin = 15*mm
         right_margin = 15*mm
         available_width = page_width - left_margin - right_margin
         
-        # Anchos de columnas: Logo | Texto central | Fecha/Página
+        # Anchos de columnas: Logo | Centro | Fecha
         col_logo = 35*mm
         col_fecha = 35*mm
         col_centro = available_width - col_logo - col_fecha
         
-        # Obtener fecha actual en Perú
+        # Fecha actual Perú
         peru_now = datetime.utcnow() - timedelta(hours=5)
         fecha_str = peru_now.strftime('%d/%m/%Y')
-        pagina_str = f"Página {doc.page}"
+        pagina_str = f"Página {doc.page} de {len(evidences)}" if len(evidences) > 1 else f"Página {doc.page}"
         
-        # Estilos de texto para el encabezado
+        # Estilos
         estilo_titulo = ParagraphStyle('EstiloTitulo', fontSize=8, leading=10, alignment=TA_CENTER, fontName='Helvetica-Bold')
         estilo_subtitulo = ParagraphStyle('EstiloSubtitulo', fontSize=7, leading=9, alignment=TA_CENTER, fontName='Helvetica')
         estilo_titulo_grande = ParagraphStyle('EstiloTituloGrande', fontSize=10, leading=12, alignment=TA_CENTER, fontName='Helvetica-Bold')
-        estilo_fecha_label = ParagraphStyle('EstiloFechaLabel', fontSize=8, alignment=TA_CENTER, fontName='Helvetica')
-        estilo_fecha_valor = ParagraphStyle('EstiloFechaValor', fontSize=8, alignment=TA_CENTER, fontName='Helvetica')
+        estilo_texto = ParagraphStyle('EstiloTexto', fontSize=8, alignment=TA_LEFT, fontName='Helvetica')
+        estilo_fecha_valor = ParagraphStyle('EstiloFechaValor', fontSize=8, alignment=TA_LEFT, fontName='Helvetica')
         
-        # Intentar cargar el logo
+        # Logo (texto o imagen)
         logo_path = os.path.join(os.path.dirname(__file__), 'static', 'logo.png')
         if os.path.exists(logo_path):
-            logo = Image(logo_path, width=30*mm, height=12*mm)
+            try:
+                logo = Image(logo_path, width=30*mm, height=15*mm)
+            except:
+                logo = Paragraph("<b>BESALCO | STRACON</b>", estilo_titulo)
         else:
-            # Si no hay logo, usar texto
             logo = Paragraph("<b>BESALCO | STRACON</b>", estilo_titulo)
         
-        # Fila 1: Logo + Texto superior + Fecha
-        fila1 = [
-            logo,
-            Paragraph("SOLUCIONES INTEGRALES - PAQUETE 1<br/>QUEBRADAS SAN IDELFONSO Y SAN CARLOS", estilo_titulo),
-            Paragraph(f"Fecha:<br/>{fecha_str}", estilo_fecha_label)
+        # ESTRUCTURA CORRECTA DE LA TABLA (3 filas x 3 columnas)
+        # Fila 0: [Logo rowspan=3] | [SOLUCIONES...] | [Fecha: rowspan=2] [03/09/2026]
+        # Fila 1: [Logo continua] | [CONSORCIO...]     | [Fecha continua]
+        # Fila 2: [Logo continua] | [REPORTE SEMANAL colspan=2] | [Página 1]
+        
+        header_data = [
+            # Fila 0
+            [logo, 
+             Paragraph("SOLUCIONES INTEGRALES - PAQUETE 1<br/>QUEBRADAS SAN IDELFONSO Y SAN CARLOS", estilo_titulo),
+             Paragraph("Fecha:", estilo_texto)],
+            # Fila 1
+            ['',
+             Paragraph("CONSORCIO BESALCO STRACON<br/>(SEGURIDAD PATRIMONIAL)", estilo_subtitulo),
+             Paragraph(fecha_str, estilo_fecha_valor)],
+            # Fila 2
+            ['',
+             Paragraph(title, estilo_titulo_grande),
+             Paragraph(pagina_str, estilo_texto)]
         ]
         
-        # Fila 2: (logo vacío) + Texto consorcio + Página
-        fila2 = [
-            '',
-            Paragraph("CONSORCIO BESALCO STRACON<br/>(SEGURIDAD PATRIMONIAL)", estilo_subtitulo),
-            Paragraph(pagina_str, estilo_fecha_label)
-        ]
+        # Crear tabla
+        header_table = Table(header_data, colWidths=[col_logo, col_centro, col_fecha], rowHeights=[12*mm, 10*mm, 10*mm])
         
-        # Fila 3: (logo vacío) + Título del reporte + (vacío)
-        fila3 = [
-            '',
-            Paragraph(title, estilo_titulo_grande),
-            ''
-        ]
-        
-        # Crear tabla con 3 filas y 3 columnas
-        header_table = Table([fila1, fila2, fila3], colWidths=[col_logo, col_centro, col_fecha])
+        # Aplicar estilos con SPANS CORRECTOS
         header_table.setStyle(TableStyle([
-            # Bordes de todas las celdas
+            # Bordes
             ('GRID', (0, 0), (-1, -1), 0.5, black),
-            # Alineación vertical centrada
+            
+            # SPAN DEL LOGO: Columna 0, Filas 0-2 (ocupa 3 filas)
+            ('SPAN', (0, 0), (0, 2)),
+            
+            # SPAN DE FECHA: Columna 2, Filas 0-1 (ocupa 2 filas)
+            ('SPAN', (2, 0), (2, 1)),
+            
+            # SPAN DEL TITULO: Columnas 1-2, Fila 2 (ocupa 2 columnas)
+            ('SPAN', (1, 2), (2, 2)),
+            
+            # Alineación vertical
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            
             # Alineación horizontal
-            ('ALIGN', (0, 0), (0, -1), 'CENTER'),  # Logo centrado
-            ('ALIGN', (1, 0), (1, -1), 'CENTER'),  # Texto central centrado
-            ('ALIGN', (2, 0), (2, -1), 'CENTER'),  # Fecha centrada
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),   # Logo centrado
+            ('ALIGN', (1, 0), (1, -1), 'CENTER'),   # Texto centro centrado
+            ('ALIGN', (2, 0), (2, -1), 'LEFT'),     # Fecha alineada izquierda
+            
             # Padding
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
             ('LEFTPADDING', (0, 0), (-1, -1), 3),
             ('RIGHTPADDING', (0, 0), (-1, -1), 3),
         ]))
         
-        # Dibujar la tabla del encabezado
-        header_table.wrapOn(canvas, available_width, 30*mm)
-        header_table.drawOn(canvas, left_margin, header_y - 25*mm)
+        # Posicionar encabezado
+        header_y = A4[1] - 42*mm
+        header_table.wrapOn(canvas, available_width, 32*mm)
+        header_table.drawOn(canvas, left_margin, header_y)
         
-        # ========== PIE DE PÁGINA ==========
+        # Pie de página
         footer_y = 12*mm
         canvas.setFont('Helvetica', 7)
         canvas.setFillColor(HexColor('#666666'))
