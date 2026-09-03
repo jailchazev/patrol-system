@@ -60,6 +60,7 @@ class PatrolEvidence(db.Model):
             'id': self.id,
             'user_id': self.user_id,
             'user_name': user.name if user else 'Desconocido',
+            'user_role': user.role if user else '',  # ← CAMBIO AGREGADO
             'user_unit': user.unit if user else '',
             'patrol_num': self.patrol_num or '',
             'paquete': self.paquete or '',
