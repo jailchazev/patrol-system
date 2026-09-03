@@ -34,8 +34,10 @@ function formatDate(iso) {
     if (!iso) return '';
     try {
         const d = new Date(iso);
-        // Restar 5 horas (UTC a Perú)
-        const peruDate = new Date(d.getTime() - (5 * 60 * 60 * 1000));
+        
+        // Convertir UTC a Perú (UTC-5) de forma explícita
+        const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+        const peruDate = new Date(utc + (3600000 * -5));
         
         const pad = (n) => String(n).padStart(2, '0');
         const day = pad(peruDate.getUTCDate());
