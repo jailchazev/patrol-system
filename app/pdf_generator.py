@@ -66,15 +66,20 @@ def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
         patrol_num = evidence.get('patrol_num', '')
         patrol_badge = f"<b>Patrulla {patrol_num}</b>" if patrol_num else ""
         
-        user_name = evidence.get('user_name', 'Desconocido')
-        paquete = evidence.get('paquete', '—')
-        progresiva = evidence.get('progresiva', '—')
-        margen = evidence.get('margen', '—')
-        zona = evidence.get('zona', '')
-        descripcion = evidence.get('descripcion', '')
-        
-        evidence_text = f"{user_name}, realizó ronda por Paquete {paquete}, {progresiva}, margen {margen} {zona}. {descripcion}"
-        
+user_name = evidence.get('user_name', 'Desconocido')
+user_role = evidence.get('user_role', '')
+paquete = evidence.get('paquete', '—')
+progresiva = evidence.get('progresiva', '—')
+margen = evidence.get('margen', '—')
+zona = evidence.get('zona', '')
+descripcion = evidence.get('descripcion', '')
+
+# Capitalizar primera letra del rol
+role_display = user_role.capitalize() if user_role else ''
+role_prefix = f"{role_display}: " if role_display else ""
+
+evidence_text = f"{role_prefix}{user_name}, realizó ronda por Paquete {paquete}, {progresiva}, margen {margen} {zona}. {descripcion}"
+
         current_page_evidences.append(Paragraph(f"<b>{formatted_date}</b> {patrol_badge}", date_style))
         current_page_evidences.append(Spacer(1, 2*mm))
         current_page_evidences.append(Paragraph(evidence_text, evidence_style))

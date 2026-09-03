@@ -414,7 +414,9 @@ if (getEl('#evidenceForm')) {
             return;
         }
         container.innerHTML = list.map(e => {
-            const texto = `${e.user_name}, realizó ronda por Paquete ${e.paquete || '—'}, ${e.progresiva || '—'}, margen ${e.margen || '—'} ${e.zona}. ${e.descripcion}`;
+            const roleDisplay = e.user_role ? e.user_role.charAt(0).toUpperCase() + e.user_role.slice(1) : '';
+const rolePrefix = roleDisplay ? `${roleDisplay}: ` : '';
+const texto = `${rolePrefix}${e.user_name}, realizó ronda por Paquete ${e.paquete || '—'}, ${e.progresiva || '—'}, margen ${e.margen || '—'} ${e.zona}. ${e.descripcion}`;
             const fotos = (e.photos || []).slice(0, 2).map(src => `<img src="${src}" alt="evidencia">`).join('');
             return `
                 <div class="evidence-card">
