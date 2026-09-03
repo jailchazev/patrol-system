@@ -28,16 +28,17 @@ async function api(url, options = {}) {
 }
 
 /**
- * Formatear fecha ISO a formato Perú (UTC-5) para mostrar en el historial
+ * Formatear fecha ISO a formato Perú (UTC-5)
+ * Simplemente resta 5 horas al timestamp UTC
  */
 function formatDate(iso) {
     if (!iso) return '';
     try {
         const d = new Date(iso);
         
-        // Convertir UTC a Perú (UTC-5) de forma explícita
-        const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
-        const peruDate = new Date(utc + (3600000 * -5));
+        // Restar 5 horas directamente al timestamp
+        const peruTimestamp = d.getTime() - (5 * 60 * 60 * 1000);
+        const peruDate = new Date(peruTimestamp);
         
         const pad = (n) => String(n).padStart(2, '0');
         const day = pad(peruDate.getUTCDate());
