@@ -1,7 +1,7 @@
 {
   "name": "Sistema de Evidencia de Patrullas",
   "short_name": "Patrullas",
-  "description": "Registro de evidencia operativa",
+  "description": "Registro de evidencia operativa de patrullas",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a1224",
@@ -9,6 +9,7 @@
   "orientation": "portrait",
   "scope": "/",
   "lang": "es",
+  "categories": ["business", "productivity"],
   "icons": [
     {
       "src": "/static/icon-192.png",

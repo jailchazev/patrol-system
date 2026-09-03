@@ -11,6 +11,11 @@ login_manager = LoginManager()
 def create_app():
     app = Flask(__name__)
 
+    # Registrar MIME type para webmanifest (crítico para PWA en Android)
+app.config['MIME_TYPES'] = {
+    '.webmanifest': 'application/manifest+json'
+}
+
     # Configuración básica
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'patrol-secret-key-change-me-2026')
     
@@ -66,3 +71,8 @@ def _create_default_admin():
         db.session.add(admin)
         db.session.commit()
         print("✅ Usuario admin creado: code=ADMIN / password=admin123")
+
+        # Registrar MIME type para webmanifest (crítico para PWA en Android)
+app.config['MIME_TYPES'] = {
+    '.webmanifest': 'application/manifest+json'
+}
