@@ -1,6 +1,6 @@
 """
 Generador de PDF profesional para evidencias de patrullas.
-Versión final con encabezado corporativo exacto.
+Versión final estable con encabezado corporativo y rol de usuario.
 """
 
 from reportlab.lib.pagesizes import A4
@@ -66,20 +66,20 @@ def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
         patrol_num = evidence.get('patrol_num', '')
         patrol_badge = f"<b>Patrulla {patrol_num}</b>" if patrol_num else ""
         
-user_name = evidence.get('user_name', 'Desconocido')
-user_role = evidence.get('user_role', '')
-paquete = evidence.get('paquete', '—')
-progresiva = evidence.get('progresiva', '—')
-margen = evidence.get('margen', '—')
-zona = evidence.get('zona', '')
-descripcion = evidence.get('descripcion', '')
-
-# Capitalizar primera letra del rol
-role_display = user_role.capitalize() if user_role else ''
-role_prefix = f"{role_display}: " if role_display else ""
-
-evidence_text = f"{role_prefix}{user_name}, realizó ronda por Paquete {paquete}, {progresiva}, margen {margen} {zona}. {descripcion}"
-
+        user_name = evidence.get('user_name', 'Desconocido')
+        user_role = evidence.get('user_role', '')
+        paquete = evidence.get('paquete', '—')
+        progresiva = evidence.get('progresiva', '—')
+        margen = evidence.get('margen', '—')
+        zona = evidence.get('zona', '')
+        descripcion = evidence.get('descripcion', '')
+        
+        # Capitalizar primera letra del rol y agregar prefijo
+        role_display = user_role.capitalize() if user_role else ''
+        role_prefix = f"{role_display}: " if role_display else ""
+        
+        evidence_text = f"{role_prefix}{user_name}, realizó ronda por Paquete {paquete}, {progresiva}, margen {margen} {zona}. {descripcion}"
+        
         current_page_evidences.append(Paragraph(f"<b>{formatted_date}</b> {patrol_badge}", date_style))
         current_page_evidences.append(Spacer(1, 2*mm))
         current_page_evidences.append(Paragraph(evidence_text, evidence_style))
@@ -130,8 +130,7 @@ evidence_text = f"{role_prefix}{user_name}, realizó ronda por Paquete {paquete}
         right_margin = 15*mm
         available_width = page_width - left_margin - right_margin
         
-        # ESTRUCTURA DE 5 COLUMNAS:
-        # Logo | Texto Centro 1 | Texto Centro 2 | Label Fecha | Valor Fecha
+        # ESTRUCTURA DE 5 COLUMNAS
         col_logo = 30*mm
         col_centro_1 = 50*mm
         col_centro_2 = 50*mm
@@ -163,21 +162,19 @@ evidence_text = f"{role_prefix}{user_name}, realizó ronda por Paquete {paquete}
         
         # ESTRUCTURA DE 5 COLUMNAS x 3 FILAS
         header_data = [
-            # Fila 0: Logo | Texto superior (colspan 2) | "Fecha:" | Valor fecha
+            # Fila 0
             [logo, 
              Paragraph("SOLUCIONES INTEGRALES - PAQUETE 1<br/>QUEBRADAS SAN IDELFONSO Y SAN CARLOS", estilo_titulo),
-             '',  # placeholder para colspan
+             '',
              Paragraph("Fecha:", estilo_texto),
              Paragraph(fecha_str, estilo_texto_center)],
-            
-            # Fila 1: Logo continúa | Texto medio (colspan 2) | Fecha continúa | Valor continúa
+            # Fila 1
             ['',
              Paragraph("CONSORCIO BESALCO STRACON<br/>(SEGURIDAD PATRIMONIAL)", estilo_subtitulo),
              '',
              '',
              ''],
-            
-            # Fila 2: Logo continúa | Título (colspan 2) | Página (colspan 2)
+            # Fila 2
             ['',
              Paragraph(title, estilo_titulo_grande),
              '',
@@ -194,40 +191,19 @@ evidence_text = f"{role_prefix}{user_name}, realizó ronda por Paquete {paquete}
         
         # Aplicar estilos con SPANS CORRECTOS
         header_table.setStyle(TableStyle([
-            # Bordes de todas las celdas
             ('GRID', (0, 0), (-1, -1), 0.5, black),
-            
-            # SPAN DEL LOGO: Columna 0, Filas 0-2
             ('SPAN', (0, 0), (0, 2)),
-            
-            # SPAN TEXTO FILA 0: Columnas 1-2, Fila 0
             ('SPAN', (1, 0), (2, 0)),
-            
-            # SPAN TEXTO FILA 1: Columnas 1-2, Fila 1
             ('SPAN', (1, 1), (2, 1)),
-            
-            # SPAN FECHA LABEL: Columna 3, Filas 0-1
             ('SPAN', (3, 0), (3, 1)),
-            
-            # SPAN FECHA VALOR: Columna 4, Filas 0-1
             ('SPAN', (4, 0), (4, 1)),
-            
-            # SPAN TÍTULO FILA 2: Columnas 1-2, Fila 2
             ('SPAN', (1, 2), (2, 2)),
-            
-            # SPAN PÁGINA FILA 2: Columnas 3-4, Fila 2
             ('SPAN', (3, 2), (4, 2)),
-            
-            # Alineación vertical
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            
-            # Alineación horizontal
-            ('ALIGN', (0, 0), (0, -1), 'CENTER'),    # Logo centrado
-            ('ALIGN', (1, 0), (2, -1), 'CENTER'),    # Texto central centrado
-            ('ALIGN', (3, 0), (3, -1), 'RIGHT'),     # Label "Fecha:" alineado derecha
-            ('ALIGN', (4, 0), (4, -1), 'CENTER'),    # Valor fecha centrado
-            
-            # Padding
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+            ('ALIGN', (1, 0), (2, -1), 'CENTER'),
+            ('ALIGN', (3, 0), (3, -1), 'RIGHT'),
+            ('ALIGN', (4, 0), (4, -1), 'CENTER'),
             ('TOPPADDING', (0, 0), (-1, -1), 2),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
             ('LEFTPADDING', (0, 0), (-1, -1), 3),
