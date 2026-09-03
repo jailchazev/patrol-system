@@ -316,44 +316,35 @@ if ($('#evidenceForm')) {
         });
     }
 
-    // Fotos - FUNCIONAL
-    const fPhotos = $('#fPhotos');
-    if (fPhotos) {
-        fPhotos.onchange = (e) => {
-            console.log('📷 Fotos seleccionadas:', e.target.files.length);
-            Array.from(e.target.files).forEach(file => {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    photoDataUrls.push(ev.target.result);
-                    renderPhotos();
-                };
-                reader.readAsDataURL(file);
-            });
-            e.target.value = ''; // Reset para permitir seleccionar la misma foto
+    // Fotos - CÁMARA Y GALERÍA
+const fPhotosCamera = $('#fPhotosCamera');
+const fPhotosGallery = $('#fPhotosGallery');
+
+function handlePhotoSelect(files) {
+    console.log('📷 Fotos seleccionadas:', files.length);
+    Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            photoDataUrls.push(ev.target.result);
+            renderPhotos();
         };
-    }
+        reader.readAsDataURL(file);
+    });
+}
 
-    function renderPhotos() {
-        const container = $('#photoPreview');
-        if (!container) return;
-        
-        if (photoDataUrls.length === 0) {
-            container.innerHTML = '';
-            return;
-        }
-        
-        container.innerHTML = photoDataUrls.map((src, i) => `
-            <div class="photo-thumb">
-                <img src="${src}" alt="foto ${i+1}">
-                <button type="button" class="photo-remove" onclick="removePhoto(${i})">✕</button>
-            </div>
-        `).join('');
-    }
-
-    window.removePhoto = (i) => {
-        photoDataUrls.splice(i, 1);
-        renderPhotos();
+if (fPhotosCamera) {
+    fPhotosCamera.onchange = (e) => {
+        handlePhotoSelect(e.target.files);
+        e.target.value = ''; // Reset
     };
+}
+
+if (fPhotosGallery) {
+    fPhotosGallery.onchange = (e) => {
+        handlePhotoSelect(e.target.files);
+        e.target.value = ''; // Reset
+    };
+}
 
     // Submit del formulario - FUNCIONAL
     const evidenceForm = $('#evidenceForm');

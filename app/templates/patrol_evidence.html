@@ -80,11 +80,32 @@
             <div class="form-group">
                 <label>Evidencia fotográfica * (mínimo 1)</label>
                 <div class="photo-upload">
-                    <input type="file" id="fPhotos" accept="image/*" capture="environment" multiple class="input-file">
-                    <label for="fPhotos" class="photo-upload-label">
-                        <span class="photo-icon">📷</span>
-                        <span>Toca para tomar foto o seleccionar</span>
-                    </label>
+                    <div class="form-group">
+    <label>Evidencia fotográfica * (mínimo 1)</label>
+    
+    <!-- Botón para cámara -->
+    <div class="photo-upload" style="margin-bottom: 10px;">
+        <input type="file" id="fPhotosCamera" accept="image/*" capture="environment" 
+               multiple class="input-file" style="display: none;">
+        <button type="button" class="btn btn-primary btn-block" 
+                onclick="document.getElementById('fPhotosCamera').click()">
+             Tomar foto con cámara
+        </button>
+    </div>
+    
+    <!-- Botón para galería -->
+    <div class="photo-upload">
+        <input type="file" id="fPhotosGallery" accept="image/*" 
+               multiple class="input-file" style="display: none;">
+        <button type="button" class="btn btn-secondary btn-block" 
+                onclick="document.getElementById('fPhotosGallery').click()">
+            ️ Seleccionar de galería
+        </button>
+    </div>
+    
+    <!-- Vista previa de fotos -->
+    <div class="photo-preview" id="photoPreview"></div>
+</div>
                 </div>
                 <div class="photo-preview" id="photoPreview"></div>
             </div>
