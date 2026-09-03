@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, send_from_directory, current_app
+import os
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, send_from_directory, current_app, Response
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from functools import wraps
@@ -215,7 +216,8 @@ def list_evidences():
     if current_user.role != 'admin':
         query = query.filter(PatrolEvidence.user_id == current_user.id)
 
-    evidences = query.order_by(PatrolEvidence.timestamp.desc()).all()
+    # ✅ CAMBIO CLAVE: .asc() para orden ascendente (del más antiguo al más reciente)
+    evidences = query.order_by(PatrolEvidence.timestamp.asc()).all()
     return jsonify([e.to_dict() for e in evidences])
 
 
@@ -281,14 +283,15 @@ def generate_pdf():
     if current_user.role != 'admin':
         query = query.filter(PatrolEvidence.user_id == current_user.id)
     
-    evidences = query.order_by(PatrolEvidence.timestamp.desc()).all()
+    # ✅ CAMBIO CLAVE: .asc() para orden ascendente en el PDF también
+    evidences = query.order_by(PatrolEvidence.timestamp.asc()).all()
     
     if not evidences:
         return jsonify({'error': 'No hay evidencias para generar el PDF'}), 400
     
     pdf_buffer = generate_evidence_pdf(
         [e.to_dict() for e in evidences],
-        title="REPORTE SEMANAL"
+        title="REPORTE DE PATRULLAS"
     )
     
     return send_file(
@@ -299,17 +302,16 @@ def generate_pdf():
     )
 
 
-# ============ SERVICE WORKER PARA PWA ============
+# ============ PWA: SERVICE WORKER Y MANIFEST ============
 @main_bp.route('/sw.js')
 def service_worker():
     """Sirve el Service Worker desde la raíz para que el alcance sea toda la app."""
     return send_from_directory(current_app.static_folder, 'sw.js', mimetype='application/javascript')
 
+
 @main_bp.route('/manifest.webmanifest')
 def manifest_file():
-    from flask import Response
-    import os
-    # El archivo está en la raíz del proyecto
+    """Sirve el manifest con MIME type correcto para PWA."""
     file_path = os.path.join(current_app.root_path, '..', 'manifest.webmanifest.json')
     file_path = os.path.normpath(file_path)
     
