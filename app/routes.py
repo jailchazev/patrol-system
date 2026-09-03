@@ -305,16 +305,17 @@ def service_worker():
     """Sirve el Service Worker desde la raíz para que el alcance sea toda la app."""
     return send_from_directory(current_app.static_folder, 'sw.js', mimetype='application/javascript')
 
-@main_bp.route('/static/manifest.webmanifest')
-def serve_manifest():
-    """Sirve el manifest con MIME type correcto."""
-    from flask import make_response
-    manifest_path = os.path.join(current_app.static_folder, 'manifest.webmanifest')
-    if os.path.exists(manifest_path):
-        with open(manifest_path, 'r') as f:
+@main_bp.route('/manifest.webmanifest')
+def manifest_file():
+    from flask import Response
+    import os
+    file_path = os.path.join(current_app.static_folder, 'manifest.webmanifest')
+    if os.path.exists(file_path):
+        with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
-        response = make_response(content)
-        response.headers['Content-Type'] = 'application/manifest+json'
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        return response
-    return jsonify({'error': 'Manifest not found'}), 404
+        return Response(
+            content,
+            mimetype='application/manifest+json',
+            headers={'Cache-Control': 'no-cache'}
+        )
+    return 'Not found', 404

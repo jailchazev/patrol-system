@@ -7,7 +7,7 @@ const urlsToCache = [
     '/admin',
     '/static/css/style.css',
     '/static/js/app.js',
-    '/static/manifest.webmanifest'
+    '/manifest.webmanifest'
 ];
 
 // Instalar Service Worker
