@@ -291,7 +291,7 @@ def generate_pdf():
     
     pdf_buffer = generate_evidence_pdf(
         [e.to_dict() for e in evidences],
-        title="REPORTE DE PATRULLAS"
+        title="REPORTE SEMANAL"
     )
     
     return send_file(
