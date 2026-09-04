@@ -1,20 +1,18 @@
 import os
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, send_from_directory, current_app, Response
+import requests
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, send_file, Response
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from functools import wraps
 from datetime import datetime
 from app import db
 from app.models import User, PatrolEvidence
-from app.pdf_generator import generate_evidence_pdf
 
 # ============ BLUEPRINTS ============
 auth_bp = Blueprint('auth', __name__)
 main_bp = Blueprint('main', __name__)
 
-
 def admin_required(f):
-    """Decorador: solo administradores."""
     @wraps(f)
     def decorated(*args, **kwargs):
         if not current_user.is_authenticated or current_user.role != 'admin':
@@ -22,14 +20,14 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
-
 # ============ AUTENTICACIÓN ============
 @auth_bp.route('/')
 def index():
     if current_user.is_authenticated:
+        if current_user.role == 'admin':
+            return redirect(url_for('main.admin_page'))
         return redirect(url_for('main.evidence_page'))
     return redirect(url_for('auth.login'))
-
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -50,7 +48,6 @@ def login():
 
     return render_template('login.html')
 
-
 @auth_bp.route('/logout')
 @login_required
 def logout():
@@ -58,12 +55,10 @@ def logout():
     flash('Sesión cerrada correctamente', 'success')
     return redirect(url_for('auth.login'))
 
-
 @auth_bp.route('/api/session')
 @login_required
 def session_info():
     return jsonify(current_user.to_dict())
-
 
 # ============ PANEL ADMIN ============
 @main_bp.route('/admin')
@@ -72,14 +67,12 @@ def session_info():
 def admin_page():
     return render_template('admin.html')
 
-
 @main_bp.route('/api/users', methods=['GET'])
 @login_required
 @admin_required
 def list_users():
     users = User.query.order_by(User.created_at.desc()).all()
     return jsonify([u.to_dict() for u in users])
-
 
 @main_bp.route('/api/users', methods=['POST'])
 @login_required
@@ -108,7 +101,6 @@ def create_user():
     db.session.commit()
     return jsonify(user.to_dict()), 201
 
-
 @main_bp.route('/api/users/<user_id>', methods=['PUT'])
 @login_required
 @admin_required
@@ -135,7 +127,6 @@ def update_user(user_id):
     db.session.commit()
     return jsonify(user.to_dict())
 
-
 @main_bp.route('/api/users/<user_id>', methods=['DELETE'])
 @login_required
 @admin_required
@@ -147,19 +138,21 @@ def delete_user(user_id):
     db.session.commit()
     return jsonify({'ok': True})
 
-
 # ============ EVIDENCIA DE PATRULLAS ============
+@main_bp.route('/evidencia')
+@login_required
+def evidence_page():
+    """ESTA ES LA RUTA QUE FALTABA Y CAUSABA EL ERROR"""
+    return render_template('patrol_evidence.html')
+
 @main_bp.route('/api/patrol-evidence', methods=['POST'])
 @login_required
 def create_evidence():
-    """Crear evidencia y enviarla a Google Sheets via webhook."""
-    import requests
+    """Crear evidencia y enviarla a Google Sheets via webhook + Cloudinary"""
     from app.cloudinary_service import upload_multiple_images
-    from datetime import datetime
     
     data = request.get_json() or {}
 
-    # Validación
     if not data.get('descripcion'):
         return jsonify({'error': 'La descripción es obligatoria'}), 400
     
@@ -168,13 +161,12 @@ def create_evidence():
         return jsonify({'error': 'Debe adjuntar al menos una foto'}), 400
 
     try:
-        # Subir imágenes a Cloudinary
+        # 1. Subir imágenes a Cloudinary
         photo_urls = upload_multiple_images(photos)
-        
         if not photo_urls:
             return jsonify({'error': 'Error al subir las imágenes'}), 500
         
-        # Preparar datos para Google Sheets
+        # 2. Preparar payload para Google Sheets
         payload = {
             'timestamp': datetime.utcnow().isoformat(),
             'user_role': current_user.role,
@@ -188,62 +180,47 @@ def create_evidence():
             'photo_urls': photo_urls
         }
         
-        # Enviar a Google Sheets webhook
-        GOOGLE_SHEETS_WEBHOOK_URL = os.environ.get('GOOGLE_SHEETS_WEBHOOK_URL')
-        
-        response = requests.post(
-            GOOGLE_SHEETS_WEBHOOK_URL,
-            json=payload,
-            headers={'Content-Type': 'application/json'}
-        )
+        # 3. Enviar a Google Sheets webhook
+        webhook_url = os.environ.get('GOOGLE_SHEETS_WEBHOOK_URL')
+        if not webhook_url:
+            return jsonify({'error': 'Webhook de Google Sheets no configurado en Render'}), 500
+
+        response = requests.post(webhook_url, json=payload, headers={'Content-Type': 'application/json'})
         
         if response.status_code == 200:
-            return jsonify({
-                'success': True,
-                'message': 'Evidencia guardada correctamente',
-                'photo_urls': photo_urls
-            }), 201
+            # También guardamos en la BD local para que el historial web siga funcionando
+            evidence = PatrolEvidence(
+                user_id=current_user.id,
+                patrol_num=data.get('patrol_num', ''),
+                paquete=data.get('paquete', ''),
+                progresiva=data.get('progresiva', ''),
+                margen=data.get('margen', ''),
+                zona=data.get('zona', ''),
+                descripcion=data['descripcion'].strip(),
+                photos=photo_urls, # Guardamos las URLs en lugar del base64 para ahorrar espacio
+                location=data.get('location')
+            )
+            db.session.add(evidence)
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': 'Evidencia guardada correctamente', 'photo_urls': photo_urls}), 201
         else:
             return jsonify({'error': 'Error al guardar en Google Sheets'}), 500
-        
+            
     except Exception as e:
         print(f"❌ Error creando evidencia: {e}")
         return jsonify({'error': f'Error al guardar la evidencia: {str(e)}'}), 500
-
 
 @main_bp.route('/api/patrol-evidence', methods=['GET'])
 @login_required
 def list_evidences():
     query = PatrolEvidence.query
-
-    patrol = request.args.get('patrol')
-    if patrol:
-        query = query.filter(PatrolEvidence.patrol_num == patrol)
-
-    zona = request.args.get('zona')
-    if zona:
-        query = query.filter(PatrolEvidence.zona.ilike(f'%{zona}%'))
-
-    from_date = request.args.get('from')
-    to_date = request.args.get('to')
-    if from_date:
-        try:
-            query = query.filter(PatrolEvidence.timestamp >= datetime.fromisoformat(from_date))
-        except Exception:
-            pass
-    if to_date:
-        try:
-            query = query.filter(PatrolEvidence.timestamp <= datetime.fromisoformat(to_date))
-        except Exception:
-            pass
-
     if current_user.role != 'admin':
         query = query.filter(PatrolEvidence.user_id == current_user.id)
-
-    # ✅ CAMBIO CLAVE: .asc() para orden ascendente (del más antiguo al más reciente)
+    
+    # Orden ascendente (más antiguo primero)
     evidences = query.order_by(PatrolEvidence.timestamp.asc()).all()
     return jsonify([e.to_dict() for e in evidences])
-
 
 @main_bp.route('/api/patrol-evidence/<evidence_id>', methods=['PUT'])
 @login_required
@@ -253,18 +230,12 @@ def update_evidence(evidence_id):
         return jsonify({'error': 'No autorizado'}), 403
 
     data = request.get_json() or {}
-    for field in ['patrol_num', 'paquete', 'progresiva', 'margen', 'zona', 'descripcion', 'photos', 'location']:
+    for field in ['patrol_num', 'paquete', 'progresiva', 'margen', 'zona', 'descripcion', 'photos']:
         if field in data:
             setattr(evidence, field, data[field])
-    if data.get('timestamp'):
-        try:
-            evidence.timestamp = datetime.fromisoformat(data['timestamp'])
-        except Exception:
-            pass
-
+    
     db.session.commit()
     return jsonify(evidence.to_dict())
-
 
 @main_bp.route('/api/patrol-evidence/<evidence_id>', methods=['DELETE'])
 @login_required
@@ -276,47 +247,21 @@ def delete_evidence(evidence_id):
     db.session.commit()
     return jsonify({'ok': True})
 
-
 @main_bp.route('/api/patrol-evidence/pdf', methods=['GET'])
 @login_required
 def generate_pdf():
-    """Genera PDF profesional con encabezado corporativo."""
+    from app.pdf_generator import generate_evidence_pdf
+    
     query = PatrolEvidence.query
-    
-    patrol = request.args.get('patrol')
-    if patrol:
-        query = query.filter(PatrolEvidence.patrol_num == patrol)
-    
-    zona = request.args.get('zona')
-    if zona:
-        query = query.filter(PatrolEvidence.zona.ilike(f'%{zona}%'))
-    
-    from_date = request.args.get('from')
-    to_date = request.args.get('to')
-    if from_date:
-        try:
-            query = query.filter(PatrolEvidence.timestamp >= datetime.fromisoformat(from_date))
-        except Exception:
-            pass
-    if to_date:
-        try:
-            query = query.filter(PatrolEvidence.timestamp <= datetime.fromisoformat(to_date))
-        except Exception:
-            pass
-    
     if current_user.role != 'admin':
         query = query.filter(PatrolEvidence.user_id == current_user.id)
     
-    # ✅ CAMBIO CLAVE: .asc() para orden ascendente en el PDF también
     evidences = query.order_by(PatrolEvidence.timestamp.asc()).all()
     
     if not evidences:
         return jsonify({'error': 'No hay evidencias para generar el PDF'}), 400
     
-    pdf_buffer = generate_evidence_pdf(
-        [e.to_dict() for e in evidences],
-        title="REPORTE SEMANAL"
-    )
+    pdf_buffer = generate_evidence_pdf([e.to_dict() for e in evidences], title="REPORTE SEMANAL")
     
     return send_file(
         pdf_buffer,
@@ -325,26 +270,19 @@ def generate_pdf():
         download_name=f'evidencia_patrullas_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
     )
 
-
 # ============ PWA: SERVICE WORKER Y MANIFEST ============
 @main_bp.route('/sw.js')
 def service_worker():
-    """Sirve el Service Worker desde la raíz para que el alcance sea toda la app."""
+    from flask import send_from_directory
     return send_from_directory(current_app.static_folder, 'sw.js', mimetype='application/javascript')
-
 
 @main_bp.route('/manifest.webmanifest')
 def manifest_file():
-    """Sirve el manifest con MIME type correcto para PWA."""
     file_path = os.path.join(current_app.root_path, '..', 'manifest.webmanifest.json')
     file_path = os.path.normpath(file_path)
     
     if os.path.exists(file_path):
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
-        return Response(
-            content,
-            mimetype='application/manifest+json',
-            headers={'Cache-Control': 'no-cache'}
-        )
+        return Response(content, mimetype='application/manifest+json', headers={'Cache-Control': 'no-cache'})
     return 'Not found', 404
