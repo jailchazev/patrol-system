@@ -149,18 +149,17 @@ def delete_user(user_id):
 
 
 # ============ EVIDENCIA DE PATRULLAS ============
-@main_bp.route('/evidencia')
-@login_required
-def evidence_page():
-    return render_template('patrol_evidence.html')
-
-
 @main_bp.route('/api/patrol-evidence', methods=['POST'])
 @login_required
 def create_evidence():
+    """Crear evidencia y enviarla a Google Sheets via webhook."""
+    import requests
+    from app.cloudinary_service import upload_multiple_images
+    from datetime import datetime
+    
     data = request.get_json() or {}
 
-    # Solo la descripción es obligatoria, Zona ya no lo es
+    # Validación
     if not data.get('descripcion'):
         return jsonify({'error': 'La descripción es obligatoria'}), 400
     
@@ -168,20 +167,48 @@ def create_evidence():
     if not photos:
         return jsonify({'error': 'Debe adjuntar al menos una foto'}), 400
 
-    evidence = PatrolEvidence(
-        user_id=current_user.id,
-        patrol_num=data.get('patrol_num', ''),
-        paquete=data.get('paquete', ''),
-        progresiva=data.get('progresiva', ''),
-        margen=data.get('margen', ''),
-        zona=data.get('zona', ''),
-        descripcion=data['descripcion'].strip(),
-        photos=photos,
-        location=data.get('location')
-    )
-    db.session.add(evidence)
-    db.session.commit()
-    return jsonify(evidence.to_dict()), 201
+    try:
+        # Subir imágenes a Cloudinary
+        photo_urls = upload_multiple_images(photos)
+        
+        if not photo_urls:
+            return jsonify({'error': 'Error al subir las imágenes'}), 500
+        
+        # Preparar datos para Google Sheets
+        payload = {
+            'timestamp': datetime.utcnow().isoformat(),
+            'user_role': current_user.role,
+            'user_name': current_user.name,
+            'patrol_num': data.get('patrol_num', ''),
+            'paquete': data.get('paquete', ''),
+            'progresiva': data.get('progresiva', ''),
+            'margen': data.get('margen', ''),
+            'zona': data.get('zona', ''),
+            'descripcion': data['descripcion'].strip(),
+            'photo_urls': photo_urls
+        }
+        
+        # Enviar a Google Sheets webhook
+        GOOGLE_SHEETS_WEBHOOK_URL = os.environ.get('GOOGLE_SHEETS_WEBHOOK_URL')
+        
+        response = requests.post(
+            GOOGLE_SHEETS_WEBHOOK_URL,
+            json=payload,
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        if response.status_code == 200:
+            return jsonify({
+                'success': True,
+                'message': 'Evidencia guardada correctamente',
+                'photo_urls': photo_urls
+            }), 201
+        else:
+            return jsonify({'error': 'Error al guardar en Google Sheets'}), 500
+        
+    except Exception as e:
+        print(f"❌ Error creando evidencia: {e}")
+        return jsonify({'error': f'Error al guardar la evidencia: {str(e)}'}), 500
 
 
 @main_bp.route('/api/patrol-evidence', methods=['GET'])
