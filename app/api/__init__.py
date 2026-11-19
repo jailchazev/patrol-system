@@ -1,0 +1,1 @@
+"""Punto de organización para contratos HTTP y serialización de API."""
