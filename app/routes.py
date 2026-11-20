@@ -15,6 +15,22 @@ from app.tenancy import current_company_id, current_membership, available_member
 auth_bp = Blueprint('auth', __name__)
 main_bp = Blueprint('main', __name__)
 
+
+def membership_role_from_legacy(role):
+    return {
+        'admin': 'company_admin',
+        'guardia': 'guard',
+        'guard': 'guard',
+    }.get(role, role or 'guard')
+
+
+def legacy_role_from_membership(role):
+    return {
+        'company_admin': 'admin',
+        'guard': 'guardia',
+    }.get(role, role)
+
+
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -131,7 +147,11 @@ def logout():
 @auth_bp.route('/api/session')
 @login_required
 def session_info():
-    return jsonify(current_user.to_dict())
+    payload = current_user.to_dict()
+    membership = current_membership(required=False)
+    payload['role'] = legacy_role_from_membership(membership.role_key) if membership else None
+    payload['company_id'] = membership.company_id if membership else None
+    return jsonify(payload)
 
 # ============ PANEL ADMIN ============
 @main_bp.route('/admin')
@@ -153,7 +173,7 @@ def list_users():
     payload = []
     for user, membership in rows:
         item = user.to_dict()
-        item['role'] = membership.role_key
+        item['role'] = legacy_role_from_membership(membership.role_key)
         payload.append(item)
     return jsonify(payload)
 
@@ -186,12 +206,12 @@ def create_user():
     membership = CompanyMembership(
         company_id=company_id,
         legacy_user_id=user.id,
-        role_key='company_admin' if user.role == 'admin' else ('supervisor' if user.role == 'supervisor' else 'guard'),
+        role_key=membership_role_from_legacy(user.role),
     )
     db.session.add(membership)
     db.session.commit()
     payload = user.to_dict()
-    payload['role'] = membership.role_key
+    payload['role'] = legacy_role_from_membership(membership.role_key)
     return jsonify(payload), 201
 
 @main_bp.route('/api/users/<user_id>', methods=['PUT'])
@@ -213,10 +233,7 @@ def update_user(user_id):
     if data.get('role'):
         user.role = data['role']
         membership = current_membership()
-        membership.role_key = (
-            'company_admin' if user.role == 'admin' else
-            'supervisor' if user.role == 'supervisor' else 'guard'
-        )
+        membership.role_key = membership_role_from_legacy(user.role)
     if data.get('password'):
         if len(data['password']) < 6:
             return jsonify({'error': 'La contraseña debe tener al menos 6 caracteres'}), 400
