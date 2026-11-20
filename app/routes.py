@@ -42,6 +42,8 @@ def login():
         memberships = available_memberships()
         if len(memberships) != 1 and not current_company_id(required=False):
             return redirect(url_for('auth.company_selector'))
+        if current_user.role == 'admin':
+            return redirect(url_for('main.admin_page'))
         return redirect(url_for('main.evidence_page'))
 
     if request.method == 'POST':
