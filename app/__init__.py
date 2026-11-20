@@ -6,11 +6,14 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
+from flask_migrate import Migrate
+from sqlalchemy import text
 
 mimetypes.add_type("application/manifest+json", ".webmanifest")
 db = SQLAlchemy()
 login_manager = LoginManager()
 csrf = CSRFProtect()
+migrate = Migrate()
 
 
 def create_app():
@@ -36,6 +39,7 @@ def create_app():
     db.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
+    migrate.init_app(app, db)
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Debes iniciar sesión para acceder a esta página."
 
@@ -43,6 +47,28 @@ def create_app():
     from app.routes import auth_bp, main_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
+
+    from app.tenancy import TenantAccessError
+    from flask import jsonify
+
+    @app.errorhandler(TenantAccessError)
+    def tenant_access_error(error):
+        return jsonify({"error": str(error)}), 403
+
+    @app.before_request
+    def establish_tenant_database_context():
+        from flask_login import current_user
+        if not current_user.is_authenticated:
+            return None
+        from app.tenancy import current_company_id
+        if db.engine.dialect.name == "postgresql":
+            db.session.execute(text("SELECT set_config('app.current_user_id', :user_id, true)"), {"user_id": str(current_user.id)})
+            company_id = current_company_id(required=False)
+            if company_id:
+                db.session.execute(text("SELECT set_config('app.current_company_id', :company_id, true)"), {"company_id": company_id})
+        else:
+            current_company_id(required=False)
+        return None
 
     if os.environ.get("AUTO_CREATE_TABLES", "").lower() == "true":
         with app.app_context():

@@ -141,6 +141,7 @@ class PatrolEvidence(db.Model):
     """Evidencia heredada; se conserva sin alterar durante la migración."""
     __tablename__ = 'patrol_evidences'
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    company_id = db.Column(db.String(36), db.ForeignKey('companies.id', ondelete='RESTRICT'), nullable=False, index=True)
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     patrol_num = db.Column(db.String(10))
     paquete = db.Column(db.String(100))

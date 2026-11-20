@@ -7,7 +7,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from functools import wraps
 from datetime import datetime
 from app import db
-from app.models import User, PatrolEvidence
+from app.models import User, PatrolEvidence, CompanyMembership
+from app.tenancy import current_company_id
 
 # ============ BLUEPRINTS ============
 auth_bp = Blueprint('auth', __name__)
@@ -18,6 +19,7 @@ def admin_required(f):
     def decorated(*args, **kwargs):
         if not current_user.is_authenticated or current_user.role != 'admin':
             return jsonify({'error': 'Acceso no autorizado'}), 403
+        current_company_id()
         return f(*args, **kwargs)
     return decorated
 
@@ -73,7 +75,8 @@ def admin_page():
 @login_required
 @admin_required
 def list_users():
-    users = User.query.order_by(User.created_at.desc()).all()
+    company_id = current_company_id()
+    users = User.query.join(CompanyMembership, CompanyMembership.legacy_user_id == User.id).filter(CompanyMembership.company_id == company_id).order_by(User.created_at.desc()).all()
     return jsonify([u.to_dict() for u in users])
 
 @main_bp.route('/api/users', methods=['POST'])
@@ -89,6 +92,7 @@ def create_user():
         return jsonify({'error': 'Código, nombre y contraseña son obligatorios'}), 400
     if len(password) < 6:
         return jsonify({'error': 'La contraseña debe tener al menos 6 caracteres'}), 400
+    company_id = current_company_id()
     if User.query.filter_by(code=code).first():
         return jsonify({'error': f'El código {code} ya está registrado'}), 400
 
@@ -100,6 +104,8 @@ def create_user():
         password_hash=generate_password_hash(password)
     )
     db.session.add(user)
+    db.session.flush()
+    db.session.add(CompanyMembership(company_id=company_id, legacy_user_id=user.id, role_key='company_admin' if user.role == 'admin' else ('supervisor' if user.role == 'supervisor' else 'guard')))
     db.session.commit()
     return jsonify(user.to_dict()), 201
 
@@ -107,7 +113,7 @@ def create_user():
 @login_required
 @admin_required
 def update_user(user_id):
-    user = User.query.get_or_404(user_id)
+    user = User.query.join(CompanyMembership, CompanyMembership.legacy_user_id == User.id).filter(User.id == user_id, CompanyMembership.company_id == current_company_id()).first_or_404()
     data = request.get_json() or {}
 
     new_code = (data.get('code') or '').strip().upper()
@@ -133,7 +139,7 @@ def update_user(user_id):
 @login_required
 @admin_required
 def delete_user(user_id):
-    user = User.query.get_or_404(user_id)
+    user = User.query.join(CompanyMembership, CompanyMembership.legacy_user_id == User.id).filter(User.id == user_id, CompanyMembership.company_id == current_company_id()).first_or_404()
     if user.id == current_user.id:
         return jsonify({'error': 'No puedes eliminar tu propia cuenta'}), 400
     db.session.delete(user)
@@ -165,8 +171,8 @@ def create_evidence():
         return jsonify({'error': 'La descripción es obligatoria'}), 400
     
     photos = data.get('photos') or []
-    if not photos:
-        return jsonify({'error': 'Debe adjuntar al menos una foto'}), 400
+    if not isinstance(photos, list) or not 1 <= len(photos) <= 2:
+        return jsonify({'error': 'Adjunta una o dos fotografías válidas'}), 400
 
     print("="*60)
     print(f"📝 NUEVA EVIDENCIA - Usuario: {current_user.name}")
@@ -188,10 +194,10 @@ def create_evidence():
         print(f"✅ Cloudinary completado. URLs: {len(photo_urls)} imágenes")
         
     except Exception as e:
-        print(f"❌ Error en Cloudinary: {e}")
-        print(traceback.format_exc())
-        # Continuamos sin imágenes en lugar de fallar todo
-    
+        print(f"Error en Cloudinary: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'No se pudieron subir las fotografías; la evidencia no fue guardada.'}), 502
+        
     try:
         # Preparar payload para Google Sheets
         payload = {
@@ -234,6 +240,7 @@ def create_evidence():
         # Guardar en BD local (SIEMPRE, incluso si falla lo demás)
         print("💾 Guardando en base de datos local...")
         evidence = PatrolEvidence(
+            company_id=current_company_id(),
             user_id=current_user.id,
             patrol_num=data.get('patrol_num', ''),
             paquete=data.get('paquete', ''),
@@ -274,7 +281,7 @@ def create_evidence():
 @main_bp.route('/api/patrol-evidence', methods=['GET'])
 @login_required
 def list_evidences():
-    query = PatrolEvidence.query
+    query = PatrolEvidence.query.filter(PatrolEvidence.company_id == current_company_id())
     if current_user.role != 'admin':
         query = query.filter(PatrolEvidence.user_id == current_user.id)
     
@@ -285,7 +292,7 @@ def list_evidences():
 @main_bp.route('/api/patrol-evidence/<evidence_id>', methods=['PUT'])
 @login_required
 def update_evidence(evidence_id):
-    evidence = PatrolEvidence.query.get_or_404(evidence_id)
+    evidence = PatrolEvidence.query.filter_by(id=evidence_id, company_id=current_company_id()).first_or_404()
     if current_user.role != 'admin' and evidence.user_id != current_user.id:
         return jsonify({'error': 'No autorizado'}), 403
 
@@ -300,7 +307,7 @@ def update_evidence(evidence_id):
 @main_bp.route('/api/patrol-evidence/<evidence_id>', methods=['DELETE'])
 @login_required
 def delete_evidence(evidence_id):
-    evidence = PatrolEvidence.query.get_or_404(evidence_id)
+    evidence = PatrolEvidence.query.filter_by(id=evidence_id, company_id=current_company_id()).first_or_404()
     if current_user.role != 'admin' and evidence.user_id != current_user.id:
         return jsonify({'error': 'No autorizado'}), 403
     db.session.delete(evidence)
@@ -312,7 +319,7 @@ def delete_evidence(evidence_id):
 def generate_pdf():
     from app.pdf_generator import generate_evidence_pdf
     
-    query = PatrolEvidence.query
+    query = PatrolEvidence.query.filter(PatrolEvidence.company_id == current_company_id())
     if current_user.role != 'admin':
         query = query.filter(PatrolEvidence.user_id == current_user.id)
     

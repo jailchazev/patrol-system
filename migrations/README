@@ -1,0 +1,10 @@
+# Database migrations
+
+This directory is managed by Flask-Migrate/Alembic. Review every generated revision before applying it.
+
+Commands (staging first):
+- flask --app wsgi:app db current
+- flask --app wsgi:app db upgrade
+- flask --app wsgi:app db downgrade -1
+
+Never run upgrade or downgrade against production without a verified backup and a restore rehearsal.
