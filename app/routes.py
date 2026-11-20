@@ -145,8 +145,17 @@ def admin_page():
 @admin_required
 def list_users():
     company_id = current_company_id()
-    users = User.query.join(CompanyMembership, CompanyMembership.legacy_user_id == User.id).filter(CompanyMembership.company_id == company_id).order_by(User.created_at.desc()).all()
-    return jsonify([u.to_dict() for u in users])
+    rows = db.session.query(User, CompanyMembership).join(
+        CompanyMembership, CompanyMembership.legacy_user_id == User.id
+    ).filter(
+        CompanyMembership.company_id == company_id
+    ).order_by(User.created_at.desc()).all()
+    payload = []
+    for user, membership in rows:
+        item = user.to_dict()
+        item['role'] = membership.role_key
+        payload.append(item)
+    return jsonify(payload)
 
 @main_bp.route('/api/users', methods=['POST'])
 @login_required
@@ -174,9 +183,16 @@ def create_user():
     )
     db.session.add(user)
     db.session.flush()
-    db.session.add(CompanyMembership(company_id=company_id, legacy_user_id=user.id, role_key='company_admin' if user.role == 'admin' else ('supervisor' if user.role == 'supervisor' else 'guard')))
+    membership = CompanyMembership(
+        company_id=company_id,
+        legacy_user_id=user.id,
+        role_key='company_admin' if user.role == 'admin' else ('supervisor' if user.role == 'supervisor' else 'guard'),
+    )
+    db.session.add(membership)
     db.session.commit()
-    return jsonify(user.to_dict()), 201
+    payload = user.to_dict()
+    payload['role'] = membership.role_key
+    return jsonify(payload), 201
 
 @main_bp.route('/api/users/<user_id>', methods=['PUT'])
 @login_required
@@ -213,10 +229,14 @@ def update_user(user_id):
 @login_required
 @admin_required
 def delete_user(user_id):
-    user = User.query.join(CompanyMembership, CompanyMembership.legacy_user_id == User.id).filter(User.id == user_id, CompanyMembership.company_id == current_company_id()).first_or_404()
-    if user.id == current_user.id:
+    membership = CompanyMembership.query.filter_by(
+        legacy_user_id=user_id,
+        company_id=current_company_id(),
+    ).first_or_404()
+    if user_id == current_user.id:
         return jsonify({'error': 'No puedes eliminar tu propia cuenta'}), 400
-    db.session.delete(user)
+    # Revoca el acceso solo a esta empresa; conserva la identidad y sus evidencias históricas.
+    db.session.delete(membership)
     db.session.commit()
     return jsonify({'ok': True})
 
