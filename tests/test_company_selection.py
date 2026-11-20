@@ -79,3 +79,13 @@ def test_multiple_memberships_require_selection_and_scope_queries(app):
     evidence = evidence_response.get_json()
     assert len(evidence) == 1
     assert evidence[0]["descripcion"] == "Solo B"
+
+    # La selección se puede cambiar, pero siempre se valida contra membresías.
+    switched = client.post(
+        "/api/companies/select",
+        json={"company_id": app.config["TEST_COMPANY_A_ID"]},
+    )
+    assert switched.status_code == 200
+    evidence_a = client.get("/api/patrol-evidence").get_json()
+    assert len(evidence_a) == 1
+    assert evidence_a[0]["descripcion"] == "Solo A"
