@@ -101,11 +101,13 @@ def create_app():
         from flask_login import current_user
         if not current_user.is_authenticated:
             return {"available_company_count": 0, "active_company": None}
-        from app.tenancy import available_memberships, current_company
+        from app.tenancy import available_memberships, current_membership
         memberships = available_memberships()
+        active_membership = current_membership(required=False)
         return {
             "available_company_count": len(memberships),
-            "active_company": current_company(required=False),
+            "active_membership": active_membership,
+            "active_company": active_membership.company if active_membership else None,
         }
 
     if os.environ.get("AUTO_CREATE_TABLES", "").lower() == "true":
