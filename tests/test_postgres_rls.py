@@ -30,8 +30,6 @@ def rls_schema():
     admin.autocommit = True
     try:
         with admin.cursor() as cur:
-            cur.execute("SELECT current_user")
-            owner = cur.fetchone()[0]
             cur.execute("CREATE SCHEMA " + schema)
             cur.execute(
                 f"""
@@ -135,6 +133,8 @@ def test_rls_blocks_cross_company_reads_and_writes_and_context_does_not_leak(rls
                         VALUES ('evidence-forged', 'company-b', 'forged')
                         """
                     )
+                # A rejected statement aborts the transaction; roll it back before reuse.
+                conn.rollback()
 
         # The transaction ended: the transaction-local setting must not survive.
         with conn:
