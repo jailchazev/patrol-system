@@ -144,7 +144,7 @@ if (getEl('#usersTable')) {
                 <td>${escapeHTML(u.name)}</td>
                 <td>${escapeHTML(u.unit || '—')}</td>
                 <td>${escapeHTML(u.post || '—')}</td>
-                <td><span class="role-badge role-${u.role}">${u.role}</span></td>
+                <td><span class="role-badge role-${escapeHTML(u.role)}">${escapeHTML(u.role)}</span></td>
                 <td>${u.shift === 'noche' ? '🌙 Noche' : '☀️ Día'}</td>
                 <td class="text-right">
                     <div class="action-btns">
@@ -422,7 +422,7 @@ if (getEl('#evidenceForm')) {
         if (!ubicacion && !descripcion) texto += ', realizó ronda de inspección';
         texto += '.';
 
-            const fotos = (e.photos || []).slice(0, 2).map(src => `<img src="${src}" alt="evidencia">`).join('');
+            const fotos = (e.photos || []).slice(0, 2).filter(src => String(src).startsWith("https://res.cloudinary.com/")).map(src => `<img src="${escapeHTML(src)}" alt="evidencia">`).join('');
             return `
                 <div class="evidence-card">
                     <div class="evidence-header">
@@ -431,7 +431,7 @@ if (getEl('#evidenceForm')) {
                             ${e.patrol_num ? `<span class="patrol-badge">Patrulla ${escapeHTML(e.patrol_num)}</span>` : ''}
                         </div>
                     </div>
-                    <div class="evidence-text">${texto}</div>
+                    <div class="evidence-text">${escapeHTML(texto)}</div>
                     ${fotos ? `<div class="evidence-photos">${fotos}</div>` : ''}
                     <div class="evidence-actions">
                         <button class="icon-btn" onclick="window.editEvidence('${e.id}')">✏️ Editar</button>
