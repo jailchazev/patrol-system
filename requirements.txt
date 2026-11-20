@@ -7,4 +7,5 @@ psycopg2-binary==2.9.9
 reportlab==4.0.7
 cloudinary==1.36.0
 requests==2.31.0
-python-dotenv==1.0.0\nFlask-WTF==1.2.2\n
+python-dotenv==1.0.0
+Flask-WTF==1.2.2

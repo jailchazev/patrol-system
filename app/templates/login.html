@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0a1224">\n    {{ csrf_meta_tag() }}
+    <meta name="theme-color" content="#0a1224">
+    {{ csrf_meta_tag() }}
     <title>Iniciar sesión · Patrullas</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
@@ -21,7 +22,8 @@
             {% endfor %}
         {% endwith %}
 
-        <form method="POST" action="{{ url_for('auth.login') }}" class="login-form">\n            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <form method="POST" action="{{ url_for('auth.login') }}" class="login-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label for="code">Código de trabajador</label>
                 <input type="text" id="code" name="code" required autocomplete="username" autofocus

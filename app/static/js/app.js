@@ -1,6 +1,7 @@
 /* ============ UTILS ============ */
 const getEl = (sel) => document.querySelector(sel);
-const getEls = (sel) => document.querySelectorAll(sel);\nconst escapeHTML = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll(String.fromCharCode(34),'&quot;').replaceAll(String.fromCharCode(39),'&#39;');
+const getEls = (sel) => document.querySelectorAll(sel);
+const escapeHTML = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll(String.fromCharCode(34),'&quot;').replaceAll(String.fromCharCode(39),'&#39;');
 
 function toast(msg, type = 'info') {
     const container = getEl('#toastContainer');
