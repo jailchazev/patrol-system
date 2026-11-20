@@ -45,3 +45,43 @@ jobs:
           TEST_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@localhost:5432/patrol_test
           TEST_POSTGRES_APP_URL: postgresql://patrol_rls_app:rls-test-password@localhost:5432/patrol_test
         run: python -m pytest -q tests/test_postgres_rls.py
+
+  postgres-migration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Create isolated migration database and restricted role
+        env:
+          PGPASSWORD: postgres
+        run: |
+          createdb -h localhost -U postgres patrol_migration_test
+          psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE ROLE patrol_rls_app LOGIN PASSWORD 'rls-test-password' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS"
+          psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -c "GRANT CONNECT ON DATABASE patrol_migration_test TO patrol_rls_app"
+      - name: Run migration, tenant isolation and rollback tests
+        env:
+          TEST_POSTGRES_MIGRATION_URL: postgresql://postgres:postgres@localhost:5432/patrol_migration_test
+          TEST_POSTGRES_MIGRATION_APP_URL: postgresql://patrol_rls_app:rls-test-password@localhost:5432/patrol_migration_test
+          APP_ENV: testing
+          SECRET_KEY: ci-only-secret
+        run: python -m pytest -q tests/test_postgres_migration.py
