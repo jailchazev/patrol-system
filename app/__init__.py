@@ -2,7 +2,7 @@ import os
 import mimetypes
 import secrets
 from datetime import timedelta
-from flask import Flask, redirect, request, url_for
+from flask import Flask, jsonify, redirect, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
@@ -22,8 +22,22 @@ def create_app():
     secret = os.environ.get("SECRET_KEY")
     if production and not secret:
         raise RuntimeError("SECRET_KEY debe configurarse en producción.")
+
+    db_url = os.environ.get("DATABASE_URL")
+    if production and not db_url:
+        raise RuntimeError("DATABASE_URL debe configurarse en producción; SQLite no está permitido.")
+    if production and db_url and db_url.startswith("sqlite:"):
+        raise RuntimeError("SQLite no está permitido en producción. Configura PostgreSQL.")
+    # Render puede entregar postgres:// o postgresql://. Fijamos el driver
+    # psycopg2, instalado en requirements.txt.
+    if db_url and db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif db_url and db_url.startswith("postgresql://"):
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+
     app.config.update(
         SECRET_KEY=secret or secrets.token_hex(32),
+        SQLALCHEMY_DATABASE_URI=db_url or "sqlite:///patrol.db",
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         MAX_CONTENT_LENGTH=50 * 1024 * 1024,
         SESSION_COOKIE_SECURE=production,
@@ -31,14 +45,6 @@ def create_app():
         SESSION_COOKIE_SAMESITE="Lax",
         PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
     )
-    db_url = os.environ.get("DATABASE_URL")
-    # El proyecto instala psycopg2-binary; seleccionar el driver explícitamente
-    # evita que SQLAlchemy 2.1 intente importar psycopg (psycopg3).
-    if db_url and db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
-    elif db_url and db_url.startswith("postgresql://"):
-        db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
-    app.config["SQLALCHEMY_DATABASE_URI"] = db_url or "sqlite:///patrol.db"
 
     db.init_app(app)
     login_manager.init_app(app)
@@ -52,8 +58,19 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
 
+    @app.get("/health")
+    def health_check():
+        # Render solo recibe un estado genérico; nunca se exponen credenciales
+        # ni detalles internos de la conexión.
+        try:
+            db.session.execute(text("SELECT 1"))
+            return jsonify({"status": "ok", "database": "connected"}), 200
+        except Exception:
+            app.logger.exception("Health check: database connection failed")
+            db.session.rollback()
+            return jsonify({"status": "unavailable", "database": "disconnected"}), 503
+
     from app.tenancy import TenantAccessError
-    from flask import jsonify
 
     @app.errorhandler(TenantAccessError)
     def tenant_access_error(error):
@@ -79,7 +96,6 @@ def create_app():
         else:
             company_id = current_company_id(required=False)
 
-        # Evita que una cuenta multiempresa entre por una URL guardada sin elegir tenant.
         if not company_id:
             from app.tenancy import available_memberships
             if len(available_memberships()) > 1:
@@ -90,6 +106,7 @@ def create_app():
                     "auth.logout",
                     "main.service_worker",
                     "main.manifest_file",
+                    "health_check",
                     "static",
                 }
                 if request.endpoint not in allowed_endpoints and not request.path.startswith("/api/"):
@@ -110,6 +127,7 @@ def create_app():
             "active_company": active_membership.company if active_membership else None,
         }
 
+    # No crear tablas ni migrar datos automáticamente durante el despliegue.
     if os.environ.get("AUTO_CREATE_TABLES", "").lower() == "true":
         with app.app_context():
             db.create_all()
