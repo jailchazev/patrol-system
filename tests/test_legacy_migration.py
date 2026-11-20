@@ -1,4 +1,7 @@
-import os
+import importlib.util
+from pathlib import Path
+
+import pytest
 
 from app import create_app, db
 from app.models import Company, CompanyMembership, PatrolEvidence
@@ -68,3 +71,19 @@ def test_legacy_database_migration_preserves_and_assigns_records(monkeypatch):
         assert evidence.company_id == company.id
         assert evidence.descripcion == "Registro que no se debe perder"
         assert evidence.photos == []
+
+
+def test_tenant_migration_requires_explicit_approval(monkeypatch):
+    migration_path = (
+        Path(__file__).resolve().parents[1]
+        / "migrations"
+        / "versions"
+        / "20261120_0001_tenant_foundation.py"
+    )
+    spec = importlib.util.spec_from_file_location("tenant_foundation_migration", migration_path)
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+
+    monkeypatch.delenv("ALLOW_LEGACY_TENANT_MIGRATION", raising=False)
+    with pytest.raises(RuntimeError, match="Migración multiempresa bloqueada"):
+        migration._require_explicit_approval()
