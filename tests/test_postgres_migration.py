@@ -12,9 +12,10 @@ from app import create_app
 
 
 MIGRATION_URL = os.getenv("TEST_POSTGRES_MIGRATION_URL")
+APP_URL = os.getenv("TEST_POSTGRES_MIGRATION_APP_URL")
 pytestmark = pytest.mark.skipif(
-    not MIGRATION_URL,
-    reason="Configura TEST_POSTGRES_MIGRATION_URL para probar migraciones PostgreSQL",
+    not MIGRATION_URL or not APP_URL,
+    reason="Configura TEST_POSTGRES_MIGRATION_URL y TEST_POSTGRES_MIGRATION_APP_URL",
 )
 
 
@@ -132,6 +133,80 @@ def test_postgres_upgrade_and_downgrade_preserve_legacy_data(monkeypatch):
                   )
             """)
             assert cur.fetchone()[0] >= 4
+
+            # Crea una segunda empresa y una evidencia que el rol de aplicación no debe ver.
+            cur.execute("""
+                INSERT INTO companies (id, name, slug, status, created_at, updated_at)
+                VALUES ('company-b-pg', 'Empresa B', 'empresa-b-pg', 'active', NOW(), NOW())
+            """)
+            cur.execute("""
+                INSERT INTO patrol_evidences
+                    (id, company_id, user_id, zona, descripcion)
+                VALUES
+                    ('evidence-company-b', 'company-b-pg', 'legacy-user-pg',
+                     'Zona B', 'No debe ser visible desde empresa A')
+            """)
+            cur.execute("""
+                GRANT USAGE ON SCHEMA public TO patrol_rls_app
+            """)
+            cur.execute("""
+                GRANT SELECT, INSERT, UPDATE, DELETE
+                ON patrol_evidences, company_memberships, companies
+                TO patrol_rls_app
+            """)
+
+        # Valida las políticas creadas por la migración usando el rol real restringido.
+        app_conn = psycopg2.connect(APP_URL)
+        try:
+            with app_conn:
+                with app_conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT rolsuper, rolbypassrls FROM pg_roles
+                        WHERE rolname = current_user
+                    """)
+                    assert cur.fetchone() == (False, False)
+
+                    # La membresía propia puede leerse antes de seleccionar empresa.
+                    cur.execute(
+                        "SELECT set_config('app.current_user_id', %s, true)",
+                        ('legacy-user-pg',),
+                    )
+                    cur.execute("""
+                        SELECT role_key FROM company_memberships
+                        WHERE legacy_user_id = 'legacy-user-pg'
+                    """)
+                    assert cur.fetchall() == [('company_admin',)]
+
+                    cur.execute(
+                        "SELECT set_config('app.current_company_id', %s, true)",
+                        ('f5a0f35a-6c5b-4c9d-9c70-9f5d84e90a10',),
+                    )
+                    cur.execute("""
+                        SELECT id FROM patrol_evidences ORDER BY id
+                    """)
+                    assert cur.fetchall() == [('legacy-evidence-pg',)]
+
+                    cur.execute("""
+                        UPDATE patrol_evidences SET descripcion = 'ataque'
+                        WHERE id = 'evidence-company-b'
+                    """)
+                    assert cur.rowcount == 0
+                    cur.execute("""
+                        DELETE FROM patrol_evidences WHERE id = 'evidence-company-b'
+                    """)
+                    assert cur.rowcount == 0
+
+                    with pytest.raises(psycopg2.errors.InsufficientPrivilege):
+                        cur.execute("""
+                            INSERT INTO patrol_evidences
+                                (id, company_id, user_id, zona, descripcion)
+                            VALUES
+                                ('forged-company-evidence', 'company-b-pg',
+                                 'legacy-user-pg', 'Zona B', 'Inserción no permitida')
+                        """)
+                    app_conn.rollback()
+        finally:
+            app_conn.close()
 
         downgraded = app.test_cli_runner().invoke(args=["db", "downgrade", "base"])
         assert downgraded.exit_code == 0, downgraded.output
