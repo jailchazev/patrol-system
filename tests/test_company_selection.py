@@ -22,7 +22,7 @@ def app(monkeypatch):
         user = User(
             code="MULTI-01",
             name="Usuario multiempresa",
-            role="guardia",
+            role="admin",  # Rol global heredado no debe dar privilegios en los tenants.
             password_hash=generate_password_hash("clave-segura"),
         )
         db.session.add(user)
@@ -78,6 +78,9 @@ def test_multiple_memberships_require_selection_and_scope_queries(app):
     )
     assert selected.status_code == 200
     assert selected.get_json()["success"] is True
+
+    # Aunque el registro heredado diga "admin", el rol de membresía "guard" manda.
+    assert client.get("/api/users").status_code == 403
 
     evidence_response = client.get("/api/patrol-evidence")
     assert evidence_response.status_code == 200
