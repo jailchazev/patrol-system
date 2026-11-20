@@ -88,6 +88,7 @@ def test_postgres_upgrade_and_downgrade_preserve_legacy_data(monkeypatch):
 
         monkeypatch.setenv("APP_ENV", "testing")
         monkeypatch.setenv("SECRET_KEY", "postgres-migration-test-only")
+        monkeypatch.setenv("ALLOW_LEGACY_TENANT_MIGRATION", "true")
         monkeypatch.setenv("DATABASE_URL", MIGRATION_URL)
         monkeypatch.delenv("AUTO_CREATE_TABLES", raising=False)
         monkeypatch.delenv("AUTO_PROVISION_LEGACY_COMPANY", raising=False)
