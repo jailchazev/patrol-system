@@ -24,3 +24,14 @@
 ## Límite actual
 
 La selección está conectada al modelo de usuario heredado (`users`) y a `company_memberships`. La autenticación global de `platform_users`, el superadministrador, la aprobación de solicitudes y la administración completa de empresas todavía requieren sus propios flujos y pruebas. No se debe considerar terminada la plataforma SaaS hasta completar esas etapas.
+
+## Autorización y revocación por empresa
+
+- Las decisiones de acceso usan `company_memberships.role_key`, no el campo global heredado `users.role`.
+- La interfaz muestra el rol de la membresía activa.
+- Quitar un trabajador de una empresa revoca solo esa membresía; no elimina la identidad global ni sus evidencias históricas ni las membresías que tenga en otras empresas.
+- Las operaciones de administración se limitan a la membresía de la empresa seleccionada.
+
+## Limitación de identidad pendiente
+
+La tabla heredada `users` todavía almacena código, nombre y hash de contraseña globales. El flujo de restablecimiento de contraseña y la edición de perfil compartido deben migrarse a un servicio de identidad global antes de permitir que un mismo usuario comparta cuenta entre empresas en producción. No habilitar todavía usuarios multiempresa reales en producción sin completar esa separación.
