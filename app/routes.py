@@ -117,6 +117,7 @@ def select_company():
 @login_required
 def logout():
     logout_user()
+    session.clear()
     flash('Sesión cerrada correctamente', 'success')
     return redirect(url_for('auth.login'))
 
