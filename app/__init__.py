@@ -1,72 +1,38 @@
 import os
 import mimetypes
+import secrets
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
-from werkzeug.security import generate_password_hash
 
-# Registrar MIME type para webmanifest (crítico para PWA en Android)
 mimetypes.add_type('application/manifest+json', '.webmanifest')
-
-# Inicializar extensiones
 db = SQLAlchemy()
 login_manager = LoginManager()
 
+
 def create_app():
     app = Flask(__name__)
-
-    # Configuración básica
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'patrol-secret-key-change-me-2026')
-    
-    # Configuración de Base de Datos (PostgreSQL en Render, SQLite local)
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
     db_url = os.environ.get('DATABASE_URL')
     if db_url and db_url.startswith('postgres://'):
         db_url = db_url.replace('postgres://', 'postgresql://', 1)
-    
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url or 'sqlite:///patrol.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB para fotos base64
+    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
-    # Inicializar extensiones con la app
     db.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Debes iniciar sesión para acceder a esta página.'
 
-    # Importar modelos y registrar rutas
-    from app import models  # noqa
+    from app import models  # noqa: F401
     from app.routes import auth_bp, main_bp
-
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
 
-    # Crear tablas y usuario admin por defecto
     with app.app_context():
         db.create_all()
-        _create_default_admin()
-        
-        # Debug seguro
-        print("=" * 60)
-        print(f"DATABASE_URL del entorno: {os.environ.get('DATABASE_URL', 'NO CONFIGURADA')}")
-        print(f"Base de datos en uso: {app.config['SQLALCHEMY_DATABASE_URI']}")
-        print("=" * 60)
+        from app.tenancy import provision_legacy_company
+        provision_legacy_company()
 
     return app
-
-
-def _create_default_admin():
-    """Crea un usuario admin por defecto si no existe ninguno."""
-    from app.models import User
-    if not User.query.filter_by(role='admin').first():
-        admin = User(
-            code='ADMIN',
-            name='Administrador del Sistema',
-            unit='SISTEMAS',
-            post='Administrador',
-            role='admin',
-            shift='dia',
-            password_hash=generate_password_hash('admin123')
-        )
-        db.session.add(admin)
-        db.session.commit()
-        print("✅ Usuario admin creado: code=ADMIN / password=admin123")
