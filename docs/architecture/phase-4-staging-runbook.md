@@ -27,10 +27,12 @@ Antes de migrar, confirmar que el rol no sea superusuario ni tenga `BYPASSRLS`. 
 ## Ejecución en staging
 
 ```bash
+# Activar solo después de confirmar que es la base de staging restaurada.
+export ALLOW_LEGACY_TENANT_MIGRATION=true
 flask --app wsgi:app db upgrade
 ```
 
-Ejecutar el comando con las variables de entorno de staging y después registrar:
+La revisión Alembic bloquea tanto upgrade como downgrade si no se define explícitamente `ALLOW_LEGACY_TENANT_MIGRATION=true`. No guardar esa variable como valor permanente de producción. Ejecutar el comando con las variables de entorno de staging y después registrar:
 
 - conteo de usuarios heredados;
 - conteo de evidencias;
@@ -52,7 +54,7 @@ Ejecutar el comando con las variables de entorno de staging y después registrar
 
 ## Reversión
 
-- En una base desechable sin nuevas operaciones, la prueba CI ejecuta `flask db downgrade base` y verifica que los datos heredados sobreviven.
+- En una base desechable sin nuevas operaciones, la prueba CI ejecuta `ALLOW_LEGACY_TENANT_MIGRATION=true flask db downgrade base` y verifica que los datos heredados sobreviven.
 - En staging con datos de prueba, detener escrituras, guardar los logs y restaurar el backup previo si se requiere volver al estado anterior.
 - No asumir que un downgrade es suficiente después de que se creen empresas y operaciones nuevas: la reversión elimina las tablas multiempresa y la asociación `company_id`.
 
