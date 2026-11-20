@@ -55,6 +55,11 @@ def test_multiple_memberships_require_selection_and_scope_queries(app):
     assert login_response.status_code == 302
     assert login_response.headers["Location"].endswith("/companies/select")
 
+    # Una URL directa tampoco permite entrar al módulo sin contexto seleccionado.
+    page_response = client.get("/evidencia", follow_redirects=False)
+    assert page_response.status_code == 302
+    assert page_response.headers["Location"].endswith("/companies/select")
+
     companies_response = client.get("/api/companies")
     assert companies_response.status_code == 200
     companies = companies_response.get_json()
