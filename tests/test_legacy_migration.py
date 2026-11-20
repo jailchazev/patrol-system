@@ -7,6 +7,7 @@ from app.models import Company, CompanyMembership, PatrolEvidence
 def test_legacy_database_migration_preserves_and_assigns_records(monkeypatch):
     monkeypatch.setenv("APP_ENV", "testing")
     monkeypatch.setenv("SECRET_KEY", "migration-test-only-secret")
+    monkeypatch.setenv("ALLOW_LEGACY_TENANT_MIGRATION", "true")
     monkeypatch.setenv("DATABASE_URL", "sqlite://")
     monkeypatch.delenv("AUTO_CREATE_TABLES", raising=False)
     app = create_app()
