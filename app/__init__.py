@@ -66,13 +66,31 @@ def create_app():
             return None
         from app.tenancy import current_company_id
         if db.engine.dialect.name == "postgresql":
-            db.session.execute(text("SELECT set_config('app.current_user_id', :user_id, true)"), {"user_id": str(current_user.id)})
+            db.session.execute(
+                text("SELECT set_config('app.current_user_id', :user_id, true)"),
+                {"user_id": str(current_user.id)},
+            )
             company_id = current_company_id(required=False)
             if company_id:
-                db.session.execute(text("SELECT set_config('app.current_company_id', :company_id, true)"), {"company_id": company_id})
+                db.session.execute(
+                    text("SELECT set_config('app.current_company_id', :company_id, true)"),
+                    {"company_id": company_id},
+                )
         else:
             current_company_id(required=False)
         return None
+
+    @app.context_processor
+    def inject_company_context():
+        from flask_login import current_user
+        if not current_user.is_authenticated:
+            return {"available_company_count": 0, "active_company": None}
+        from app.tenancy import available_memberships, current_company
+        memberships = available_memberships()
+        return {
+            "available_company_count": len(memberships),
+            "active_company": current_company(required=False),
+        }
 
     if os.environ.get("AUTO_CREATE_TABLES", "").lower() == "true":
         with app.app_context():
