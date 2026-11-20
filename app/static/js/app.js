@@ -180,8 +180,8 @@ if (getEl('#usersTable')) {
     window.editUser = (id) => { const u = allUsers.find(x => x.id === id); if (u) window.openUserModal(u); };
     window.deleteUser = async (id) => {
         const target = allUsers.find(user => user.id === id);
-        if (!target || !confirm(`¿Eliminar al usuario "${target.name}"?`)) return;
-        try { await api(`/api/users/${id}`, { method: 'DELETE' }); toast('Usuario eliminado', 'success'); loadUsers(); } catch (e) {}
+        if (!target || !confirm(`¿Revocar el acceso de "${target.name}" a esta empresa? Sus evidencias históricas se conservarán.`)) return;
+        try { await api(`/api/users/${id}`, { method: 'DELETE' }); toast('Acceso revocado en esta empresa', 'success'); loadUsers(); } catch (e) {}
     };
 
     getEl('#userForm').onsubmit = async (e) => {
