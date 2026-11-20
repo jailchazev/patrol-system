@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a1224">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Seleccionar empresa · Patrol System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .company-select-shell{min-height:100vh;display:grid;place-items:center;padding:24px;background:#0a1224;color:#f8fafc}
+        .company-select-card{width:min(100%,620px);padding:28px;border:1px solid #263650;border-radius:20px;background:#111d33;box-shadow:0 24px 70px #0005}
+        .company-select-card h1{margin:0 0 8px;font-size:clamp(1.5rem,4vw,2rem)}
+        .company-select-card p{color:#aab8cc;line-height:1.5}
+        .company-list{display:grid;gap:12px;margin-top:24px}
+        .company-option{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;padding:18px;border:1px solid #31445f;border-radius:14px;background:#17263f;color:#fff;text-align:left;cursor:pointer}
+        .company-option:hover,.company-option:focus{border-color:#60a5fa;background:#1d3150;outline:none}
+        .company-option strong{display:block;font-size:1rem}
+        .company-option small{display:block;margin-top:5px;color:#aab8cc}
+        .company-option span{color:#93c5fd;font-size:.9rem;white-space:nowrap}
+        .company-message{margin-top:16px;color:#fbbf24}
+        .company-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:24px}
+        .company-footer button{padding:10px 16px;border:0;border-radius:10px;background:#263650;color:#fff;cursor:pointer}
+    </style>
+</head>
+<body>
+    <main class="company-select-shell">
+        <section class="company-select-card">
+            <div aria-hidden="true" style="font-size:2rem;margin-bottom:12px">🛡️</div>
+            <h1>Selecciona una empresa</h1>
+            <p>Tu cuenta tiene acceso a más de una empresa. Elige el espacio de trabajo al que deseas ingresar. Solo se mostrarán empresas donde tienes una membresía activa.</p>
+            <div id="companyList" class="company-list" aria-live="polite">
+                <p>Cargando empresas…</p>
+            </div>
+            <p id="companyMessage" class="company-message" role="alert"></p>
+            <div class="company-footer">
+                <small style="color:#8293ab">Patrol System · Acceso multiempresa</small>
+                <form method="POST" action="{{ url_for('auth.logout') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit">Cerrar sesión</button>
+                </form>
+            </div>
+        </section>
+    </main>
+    <script>
+    (() => {
+        const list = document.getElementById('companyList');
+        const message = document.getElementById('companyMessage');
+        const csrf = document.querySelector('meta[name="csrf-token"]').content;
+
+        function addCompany(company) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'company-option';
+            const info = document.createElement('div');
+            const name = document.createElement('strong');
+            name.textContent = company.name;
+            const meta = document.createElement('small');
+            meta.textContent = company.slug + ' · Rol: ' + company.role;
+            info.append(name, meta);
+            const action = document.createElement('span');
+            action.textContent = company.selected ? 'Empresa actual' : 'Ingresar →';
+            button.append(info, action);
+            button.addEventListener('click', async () => {
+                message.textContent = '';
+                button.disabled = true;
+                try {
+                    const response = await fetch('/api/companies/select', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrf
+                        },
+                        body: JSON.stringify({company_id: company.id})
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || 'No se pudo seleccionar la empresa');
+                    window.location.assign(result.redirect_url);
+                } catch (error) {
+                    message.textContent = error.message;
+                    button.disabled = false;
+                }
+            });
+            list.appendChild(button);
+        }
+
+        fetch('/api/companies', {headers: {'Accept': 'application/json'}})
+            .then(async response => {
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'No se pudieron cargar las empresas');
+                list.replaceChildren();
+                if (!data.length) {
+                    const empty = document.createElement('p');
+                    empty.textContent = 'Tu usuario no tiene empresas activas. Contacta al administrador de la plataforma.';
+                    list.appendChild(empty);
+                    return;
+                }
+                data.forEach(addCompany);
+            })
+            .catch(error => {
+                list.replaceChildren();
+                message.textContent = error.message;
+            });
+    })();
+    </script>
+</body>
+</html>
