@@ -46,7 +46,7 @@ def login():
         memberships = available_memberships()
         if len(memberships) != 1 and not current_company_id(required=False):
             return redirect(url_for('auth.company_selector'))
-        if current_user.role == 'admin':
+        if current_membership(required=False) and current_membership(required=False).role_key == 'company_admin':
             return redirect(url_for('main.admin_page'))
         return redirect(url_for('main.evidence_page'))
 
@@ -196,6 +196,11 @@ def update_user(user_id):
     user.unit = (data.get('unit') or '').strip()
     if data.get('role'):
         user.role = data['role']
+        membership = current_membership()
+        membership.role_key = (
+            'company_admin' if user.role == 'admin' else
+            'supervisor' if user.role == 'supervisor' else 'guard'
+        )
     if data.get('password'):
         if len(data['password']) < 6:
             return jsonify({'error': 'La contraseña debe tener al menos 6 caracteres'}), 400
@@ -271,7 +276,7 @@ def create_evidence():
         # Preparar payload para Google Sheets
         payload = {
             'timestamp': datetime.utcnow().isoformat(),
-            'user_role': current_user.role,
+            'user_role': current_membership().role_key,
             'user_name': current_user.name,
             'patrol_num': data.get('patrol_num', ''),
             'paquete': data.get('paquete', ''),
@@ -377,7 +382,7 @@ def update_evidence(evidence_id):
 @login_required
 def delete_evidence(evidence_id):
     evidence = PatrolEvidence.query.filter_by(id=evidence_id, company_id=current_company_id()).first_or_404()
-    if current_user.role != 'admin' and evidence.user_id != current_user.id:
+    if current_membership().role_key != 'company_admin' and evidence.user_id != current_user.id:
         return jsonify({'error': 'No autorizado'}), 403
     db.session.delete(evidence)
     db.session.commit()
@@ -389,7 +394,7 @@ def generate_pdf():
     from app.pdf_generator import generate_evidence_pdf
     
     query = PatrolEvidence.query.filter(PatrolEvidence.company_id == current_company_id())
-    if current_user.role != 'admin':
+    if current_membership().role_key != 'company_admin':
         query = query.filter(PatrolEvidence.user_id == current_user.id)
     
     evidences = query.order_by(PatrolEvidence.timestamp.asc()).all()
