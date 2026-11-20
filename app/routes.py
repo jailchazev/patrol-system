@@ -3,12 +3,13 @@ import requests
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, send_file, Response
 from flask_login import login_user, logout_user, login_required, current_user
 from flask import session
+from sqlalchemy import text
 from werkzeug.security import check_password_hash, generate_password_hash
 from functools import wraps
 from datetime import datetime
 from app import db
 from app.models import User, PatrolEvidence, CompanyMembership
-from app.tenancy import current_company_id
+from app.tenancy import current_company_id, available_memberships
 
 # ============ BLUEPRINTS ============
 auth_bp = Blueprint('auth', __name__)
@@ -27,6 +28,9 @@ def admin_required(f):
 @auth_bp.route('/')
 def index():
     if current_user.is_authenticated:
+        memberships = available_memberships()
+        if len(memberships) != 1 and not current_company_id(required=False):
+            return redirect(url_for('auth.company_selector'))
         if current_user.role == 'admin':
             return redirect(url_for('main.admin_page'))
         return redirect(url_for('main.evidence_page'))
@@ -35,6 +39,9 @@ def index():
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
+        memberships = available_memberships()
+        if len(memberships) != 1 and not current_company_id(required=False):
+            return redirect(url_for('auth.company_selector'))
         return redirect(url_for('main.evidence_page'))
 
     if request.method == 'POST':
@@ -45,12 +52,66 @@ def login():
         if user and check_password_hash(user.password_hash, password):
             session.clear()
             login_user(user, remember=True)
+            memberships = available_memberships()
+            if len(memberships) != 1:
+                return redirect(url_for('auth.company_selector'))
             if user.role == 'admin':
                 return redirect(url_for('main.admin_page'))
             return redirect(url_for('main.evidence_page'))
         flash('Código o contraseña incorrectos', 'error')
 
     return render_template('login.html')
+
+@auth_bp.route('/companies/select')
+@login_required
+def company_selector():
+    return render_template('company_select.html')
+
+
+@auth_bp.route('/api/companies', methods=['GET'])
+@login_required
+def list_available_companies():
+    memberships = available_memberships()
+    selected_id = session.get('active_company_id')
+    return jsonify([
+        {
+            'id': membership.company_id,
+            'name': membership.company.name,
+            'slug': membership.company.slug,
+            'status': membership.company.status,
+            'role': membership.role_key,
+            'selected': membership.company_id == selected_id,
+        }
+        for membership in memberships
+    ])
+
+
+@auth_bp.route('/api/companies/select', methods=['POST'])
+@login_required
+def select_company():
+    data = request.get_json(silent=True) or request.form
+    company_id = str(data.get('company_id') or '').strip()
+    membership = next(
+        (m for m in available_memberships() if m.company_id == company_id),
+        None,
+    )
+    if membership is None:
+        return jsonify({'error': 'No tienes acceso activo a esa empresa'}), 403
+
+    # El ID recibido solo selecciona entre membresías ya verificadas en servidor.
+    session['active_company_id'] = membership.company_id
+    if db.engine.dialect.name == 'postgresql':
+        db.session.execute(
+            text("SELECT set_config('app.current_company_id', :company_id, true)"),
+            {'company_id': membership.company_id},
+        )
+    destination = url_for('main.admin_page') if current_user.role == 'admin' else url_for('main.evidence_page')
+    return jsonify({
+        'success': True,
+        'company': {'id': membership.company_id, 'name': membership.company.name},
+        'redirect_url': destination,
+    })
+
 
 @auth_bp.route('/logout', methods=['POST'])
 @login_required
