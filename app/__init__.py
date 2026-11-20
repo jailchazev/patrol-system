@@ -32,8 +32,12 @@ def create_app():
         PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
     )
     db_url = os.environ.get("DATABASE_URL")
+    # El proyecto instala psycopg2-binary; seleccionar el driver explícitamente
+    # evita que SQLAlchemy 2.1 intente importar psycopg (psycopg3).
     if db_url and db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
+        db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif db_url and db_url.startswith("postgresql://"):
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
     app.config["SQLALCHEMY_DATABASE_URI"] = db_url or "sqlite:///patrol.db"
 
     db.init_app(app)
