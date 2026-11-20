@@ -161,10 +161,16 @@ def test_postgres_upgrade_and_downgrade_preserve_legacy_data(monkeypatch):
             with app_conn:
                 with app_conn.cursor() as cur:
                     cur.execute("""
-                        SELECT rolsuper, rolbypassrls FROM pg_roles
-                        WHERE rolname = current_user
+                        SELECT r.rolname, r.rolsuper, r.rolbypassrls,
+                               pg_get_userbyid(t.relowner) = current_user
+                        FROM pg_roles r
+                        CROSS JOIN pg_class t
+                        JOIN pg_namespace n ON n.oid = t.relnamespace
+                        WHERE r.rolname = current_user
+                          AND n.nspname = 'public'
+                          AND t.relname = 'patrol_evidences'
                     """)
-                    assert cur.fetchone() == (False, False)
+                    assert cur.fetchone() == ("patrol_rls_app", False, False, False)
 
                     # La membresía propia puede leerse antes de seleccionar empresa.
                     cur.execute(
