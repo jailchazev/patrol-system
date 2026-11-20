@@ -13,6 +13,34 @@ from io import BytesIO
 from datetime import datetime, timedelta
 import base64
 import os
+import requests
+from urllib.parse import urlparse
+
+
+def _photo_bytes(photo):
+    """Acepta Base64 heredado o URLs HTTPS del CDN oficial de Cloudinary."""
+    if not isinstance(photo, str) or not photo:
+        return None
+    if photo.startswith("data:image/"):
+        try:
+            encoded = photo.split(",", 1)[1]
+            return base64.b64decode(encoded, validate=True)
+        except (IndexError, ValueError):
+            return None
+    parsed = urlparse(photo)
+    if parsed.scheme != "https" or parsed.hostname != "res.cloudinary.com":
+        return None
+    try:
+        response = requests.get(photo, timeout=(3, 8), stream=True)
+        response.raise_for_status()
+        content = bytearray()
+        for chunk in response.iter_content(65536):
+            content.extend(chunk)
+            if len(content) > 8 * 1024 * 1024:
+                return None
+        return bytes(content) if content else None
+    except requests.RequestException:
+        return None
 
 
 def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
@@ -114,11 +142,11 @@ def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
         photos = evidence.get('photos', [])
         if photos:
             photo_data = []
-            for photo_base64 in photos[:2]:
+            for photo in photos[:2]:
                 try:
-                    if ',' in photo_base64:
-                        photo_base64 = photo_base64.split(',')[1]
-                    photo_bytes = base64.b64decode(photo_base64)
+                    photo_bytes = _photo_bytes(photo)
+                    if not photo_bytes:
+                        continue
                     photo_buffer = BytesIO(photo_bytes)
                     img = Image(photo_buffer, width=70*mm, height=47*mm)
                     photo_data.append(img)
@@ -137,7 +165,6 @@ def generate_evidence_pdf(evidences, title="REPORTE SEMANAL"):
                     current_page_evidences.append(photo_table)
                 else:
                     current_page_evidences.append(photo_data[0])
-
                 current_page_evidences.append(Spacer(1, 5*mm))
 
         if (idx + 1) % evidences_per_page == 0 or idx == len(evidences) - 1:
