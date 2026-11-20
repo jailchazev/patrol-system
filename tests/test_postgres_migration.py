@@ -263,6 +263,14 @@ def test_postgres_upgrade_and_downgrade_preserve_legacy_data(monkeypatch):
             cur.execute("SELECT name, password_hash FROM users WHERE id = 'legacy-user-pg'")
             assert cur.fetchone() == ("Administrador histórico", "hash-original")
 
+            cur.execute("SELECT COUNT(*) FROM patrol_evidences")
+            assert cur.fetchone()[0] == 2
+            cur.execute("""
+                SELECT descripcion FROM patrol_evidences
+                WHERE id = 'evidence-company-b'
+            """)
+            assert cur.fetchone() == ("No debe ser visible desde empresa A",)
+
             cur.execute("""
                 SELECT to_regclass('public.companies'),
                        to_regclass('public.company_memberships'),
