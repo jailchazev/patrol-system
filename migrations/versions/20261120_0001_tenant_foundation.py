@@ -3,6 +3,7 @@
 Revision ID: 20261120_0001
 Revises:
 """
+import os
 from datetime import datetime
 from uuid import uuid4
 
@@ -17,7 +18,16 @@ depends_on = None
 LEGACY_COMPANY_ID = "f5a0f35a-6c5b-4c9d-9c70-9f5d84e90a10"
 
 
+def _require_explicit_approval():
+    if os.environ.get("ALLOW_LEGACY_TENANT_MIGRATION", "").lower() != "true":
+        raise RuntimeError(
+            "Migración multiempresa bloqueada. Revisa el backup y el destino; "
+            "define ALLOW_LEGACY_TENANT_MIGRATION=true solo en una base aprobada."
+        )
+
+
 def upgrade():
+    _require_explicit_approval()
     from app import db
     from app.models import (
         Company, PlatformUser, CompanyMembership, CompanyRegistrationRequest,
@@ -133,6 +143,7 @@ def upgrade():
 
 
 def downgrade():
+    _require_explicit_approval()
     bind = op.get_bind()
     if bind.dialect.name == "postgresql":
         op.execute("DROP POLICY IF EXISTS patrol_evidence_tenant_isolation ON patrol_evidences")
