@@ -181,12 +181,10 @@ def create_evidence():
         print("🔄 Iniciando subida a Cloudinary...")
         photo_urls = upload_multiple_images(photos)
         
-        if not photo_urls:
-            print("⚠️ ADVERTENCIA: No se pudo subir ninguna imagen a Cloudinary")
-            # No fallamos la petición, permitimos continuar sin imágenes
-            # pero con una advertencia
-            # return jsonify({'error': 'Error al subir las imágenes. Intenta con fotos más pequeñas.'}), 400
-        
+        if len(photo_urls) != min(len(photos), 2):
+            db.session.rollback()
+            return jsonify({'error': 'No se pudieron subir todas las fotos. La evidencia no fue guardada; vuelve a intentarlo.'}), 502
+
         print(f"✅ Cloudinary completado. URLs: {len(photo_urls)} imágenes")
         
     except Exception as e:
@@ -206,7 +204,8 @@ def create_evidence():
             'margen': data.get('margen', ''),
             'zona': data.get('zona', ''),
             'descripcion': data['descripcion'].strip(),
-            'photo_urls': photo_urls
+            'photo_urls': photo_urls,
+            'location': data.get('location')
         }
         
         # Enviar a Google Sheets webhook
