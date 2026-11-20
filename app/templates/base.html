@@ -33,6 +33,12 @@
                     <span>Usuarios</span>
                 </a>
                 {% endif %}
+                {% if available_company_count > 1 %}
+                <a href="{{ url_for('auth.company_selector') }}" class="nav-link {% if request.path == '/companies/select' %}active{% endif %}">
+                    <span class="nav-icon">🏢</span>
+                    <span>Cambiar empresa</span>
+                </a>
+                {% endif %}
             </nav>
             <div class="sidebar-footer">
                 <div class="user-info">
@@ -55,6 +61,7 @@
                 <button class="menu-toggle" id="menuToggle">☰</button>
                 <div class="topbar-title">{% block page_title %}Sistema{% endblock %}</div>
                 <div class="topbar-right">
+                    {% if active_company %}<span class="today-label">{{ active_company.name }}</span>{% endif %}
                     <span class="today-label" id="todayLabel"></span>
                 </div>
             </header>
