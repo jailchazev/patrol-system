@@ -9,7 +9,7 @@ from functools import wraps
 from datetime import datetime
 from app import db
 from app.models import User, PatrolEvidence, CompanyMembership
-from app.tenancy import current_company_id, available_memberships
+from app.tenancy import current_company_id, current_membership, available_memberships
 
 # ============ BLUEPRINTS ============
 auth_bp = Blueprint('auth', __name__)
@@ -18,7 +18,10 @@ main_bp = Blueprint('main', __name__)
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != 'admin':
+        if not current_user.is_authenticated:
+            return jsonify({'error': 'Acceso no autorizado'}), 403
+        membership = current_membership()
+        if membership.role_key != 'company_admin':
             return jsonify({'error': 'Acceso no autorizado'}), 403
         current_company_id()
         return f(*args, **kwargs)
@@ -31,7 +34,8 @@ def index():
         memberships = available_memberships()
         if len(memberships) != 1 and not current_company_id(required=False):
             return redirect(url_for('auth.company_selector'))
-        if current_user.role == 'admin':
+        membership = current_membership(required=False)
+        if membership and membership.role_key == 'company_admin':
             return redirect(url_for('main.admin_page'))
         return redirect(url_for('main.evidence_page'))
     return redirect(url_for('auth.login'))
@@ -57,7 +61,8 @@ def login():
             memberships = available_memberships()
             if len(memberships) != 1:
                 return redirect(url_for('auth.company_selector'))
-            if user.role == 'admin':
+            membership = current_membership(required=False)
+            if membership and membership.role_key == 'company_admin':
                 return redirect(url_for('main.admin_page'))
             return redirect(url_for('main.evidence_page'))
         flash('Código o contraseña incorrectos', 'error')
@@ -107,7 +112,7 @@ def select_company():
             text("SELECT set_config('app.current_company_id', :company_id, true)"),
             {'company_id': membership.company_id},
         )
-    destination = url_for('main.admin_page') if current_user.role == 'admin' else url_for('main.evidence_page')
+    destination = url_for('main.admin_page') if membership.role_key == 'company_admin' else url_for('main.evidence_page')
     return jsonify({
         'success': True,
         'company': {'id': membership.company_id, 'name': membership.company.name},
@@ -346,7 +351,7 @@ def create_evidence():
 @login_required
 def list_evidences():
     query = PatrolEvidence.query.filter(PatrolEvidence.company_id == current_company_id())
-    if current_user.role != 'admin':
+    if current_membership().role_key != 'company_admin':
         query = query.filter(PatrolEvidence.user_id == current_user.id)
     
     # Orden ascendente (más antiguo primero)
@@ -357,7 +362,7 @@ def list_evidences():
 @login_required
 def update_evidence(evidence_id):
     evidence = PatrolEvidence.query.filter_by(id=evidence_id, company_id=current_company_id()).first_or_404()
-    if current_user.role != 'admin' and evidence.user_id != current_user.id:
+    if current_membership().role_key != 'company_admin' and evidence.user_id != current_user.id:
         return jsonify({'error': 'No autorizado'}), 403
 
     data = request.get_json() or {}
