@@ -47,7 +47,7 @@ class CompanyMembership(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     company = db.relationship('Company', back_populates='memberships')
     platform_user = db.relationship('PlatformUser')
-    legacy_user = db.relationship('User')
+    legacy_user = db.relationship('User', back_populates='memberships')
 
     __table_args__ = (
         UniqueConstraint('company_id', 'platform_user_id', name='uq_membership_company_platform_user'),
