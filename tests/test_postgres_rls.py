@@ -99,9 +99,20 @@ def test_rls_blocks_cross_company_reads_and_writes_and_context_does_not_leak(rls
     try:
         with conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT current_user, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user")
+                cur.execute(
+                    """
+                    SELECT r.rolname, r.rolsuper, r.rolbypassrls,
+                           pg_get_userbyid(t.relowner) = current_user
+                    FROM pg_roles r
+                    CROSS JOIN pg_class t
+                    JOIN pg_namespace n ON n.oid = t.relnamespace
+                    WHERE r.rolname = current_user
+                      AND n.nspname = %s AND t.relname = 'patrol_evidences'
+                    """,
+                    (schema,),
+                )
                 role = cur.fetchone()
-                assert role == ("patrol_rls_app", False, False)
+                assert role == ("patrol_rls_app", False, False, False)
 
                 # Without tenant context, default-deny: no company rows are visible.
                 cur.execute(f"SELECT id FROM {schema}.patrol_evidences ORDER BY id")
