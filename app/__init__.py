@@ -2,7 +2,7 @@ import os
 import mimetypes
 import secrets
 from datetime import timedelta
-from flask import Flask
+from flask import Flask, redirect, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
@@ -77,7 +77,23 @@ def create_app():
                     {"company_id": company_id},
                 )
         else:
-            current_company_id(required=False)
+            company_id = current_company_id(required=False)
+
+        # Evita que una cuenta multiempresa entre por una URL guardada sin elegir tenant.
+        if not company_id:
+            from app.tenancy import available_memberships
+            if len(available_memberships()) > 1:
+                allowed_endpoints = {
+                    "auth.company_selector",
+                    "auth.list_available_companies",
+                    "auth.select_company",
+                    "auth.logout",
+                    "main.service_worker",
+                    "main.manifest_file",
+                    "static",
+                }
+                if request.endpoint not in allowed_endpoints and not request.path.startswith("/api/"):
+                    return redirect(url_for("auth.company_selector"))
         return None
 
     @app.context_processor
