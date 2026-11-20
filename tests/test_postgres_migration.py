@@ -141,6 +141,13 @@ def test_postgres_upgrade_and_downgrade_preserve_legacy_data(monkeypatch):
                 VALUES ('company-b-pg', 'Empresa B', 'empresa-b-pg', 'active', NOW(), NOW())
             """)
             cur.execute("""
+                INSERT INTO company_memberships
+                    (id, company_id, legacy_user_id, role_key, status, created_at)
+                VALUES
+                    ('membership-company-b', 'company-b-pg', 'legacy-user-pg',
+                     'guard', 'active', NOW())
+            """)
+            cur.execute("""
                 INSERT INTO patrol_evidences
                     (id, company_id, user_id, zona, descripcion)
                 VALUES
@@ -179,10 +186,13 @@ def test_postgres_upgrade_and_downgrade_preserve_legacy_data(monkeypatch):
                         ('legacy-user-pg',),
                     )
                     cur.execute("""
-                        SELECT role_key FROM company_memberships
+                        SELECT company_id, role_key FROM company_memberships
                         WHERE legacy_user_id = 'legacy-user-pg'
                     """)
-                    assert cur.fetchall() == [('company_admin',)]
+                    assert set(cur.fetchall()) == {
+                        ('f5a0f35a-6c5b-4c9d-9c70-9f5d84e90a10', 'company_admin'),
+                        ('company-b-pg', 'guard'),
+                    }
 
                     cur.execute(
                         "SELECT set_config('app.current_company_id', %s, true)",
@@ -193,6 +203,17 @@ def test_postgres_upgrade_and_downgrade_preserve_legacy_data(monkeypatch):
                     """)
                     assert cur.fetchall() == [('legacy-evidence-pg',)]
 
+                    cur.execute(
+                        "SELECT set_config('app.current_company_id', %s, true)",
+                        ('company-b-pg',),
+                    )
+                    cur.execute("SELECT id FROM patrol_evidences ORDER BY id")
+                    assert cur.fetchall() == [('evidence-company-b',)]
+
+                    cur.execute(
+                        "SELECT set_config('app.current_company_id', %s, true)",
+                        ('f5a0f35a-6c5b-4c9d-9c70-9f5d84e90a10',),
+                    )
                     cur.execute("""
                         UPDATE patrol_evidences SET descripcion = 'ataque'
                         WHERE id = 'evidence-company-b'
