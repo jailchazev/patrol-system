@@ -155,7 +155,7 @@ class PatrolEvidence(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):
-        user = User.query.get(self.user_id)
+        user = db.session.get(User, self.user_id)
         return {
             'id': self.id, 'user_id': self.user_id,
             'user_name': user.name if user else 'Desconocido',
@@ -172,4 +172,4 @@ class PatrolEvidence(db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(user_id)
+    return db.session.get(User, user_id)
