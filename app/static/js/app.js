@@ -1,6 +1,6 @@
 /* ============ UTILS ============ */
 const getEl = (sel) => document.querySelector(sel);
-const getEls = (sel) => document.querySelectorAll(sel);
+const getEls = (sel) => document.querySelectorAll(sel);\nconst escapeHTML = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll(String.fromCharCode(34),'&quot;').replaceAll(String.fromCharCode(39),'&#39;');
 
 function toast(msg, type = 'info') {
     const container = getEl('#toastContainer');
@@ -15,7 +15,7 @@ function toast(msg, type = 'info') {
 async function api(url, options = {}) {
     try {
         const res = await fetch(url, {
-            headers: { 'Content-Type': 'application/json', ...options.headers },
+            headers: { 'Content-Type': 'application/json', ...(document.querySelector('meta[name=\"csrf-token\"]') ? { 'X-CSRFToken': document.querySelector('meta[name=\"csrf-token\"]').content } : {}), ...options.headers },
             ...options
         });
         const data = await res.json();
@@ -33,24 +33,13 @@ async function api(url, options = {}) {
 function formatDate(iso) {
     if (!iso) return '';
     try {
-        const d = new Date(iso);
-        // Restar 5 horas directamente al timestamp (UTC a Perú)
-        const peruTimestamp = d.getTime() - (10 * 60 * 60 * 1000);
-        const peruDate = new Date(peruTimestamp);
-        
-        const pad = (n) => String(n).padStart(2, '0');
-        const day = pad(peruDate.getUTCDate());
-        const month = pad(peruDate.getUTCMonth() + 1);
-        const year = peruDate.getUTCFullYear();
-        let hours = peruDate.getUTCHours();
-        const minutes = pad(peruDate.getUTCMinutes());
-        const ampm = hours >= 12 ? 'p. m.' : 'a. m.';
-        const displayHours = hours % 12 || 12;
-        
-        return `${day}/${month}/${year}, ${String(displayHours).padStart(2, '0')}:${minutes} ${ampm}`;
+        return new Intl.DateTimeFormat('es-PE', {
+            timeZone: 'America/Lima', day: '2-digit', month: '2-digit',
+            year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true
+        }).format(new Date(iso));
     } catch (e) {
         console.error('Error formateando fecha:', e);
-        return iso;
+        return '';
     }
 }
 
@@ -150,10 +139,10 @@ if (getEl('#usersTable')) {
         }
         tbody.innerHTML = filtered.map(u => `
             <tr>
-                <td><strong>${u.code}</strong></td>
-                <td>${u.name}</td>
-                <td>${u.unit || '—'}</td>
-                <td>${u.post || '—'}</td>
+                <td><strong>${escapeHTML(u.code)}</strong></td>
+                <td>${escapeHTML(u.name)}</td>
+                <td>${escapeHTML(u.unit || '—')}</td>
+                <td>${escapeHTML(u.post || '—')}</td>
                 <td><span class="role-badge role-${u.role}">${u.role}</span></td>
                 <td>${u.shift === 'noche' ? '🌙 Noche' : '☀️ Día'}</td>
                 <td class="text-right">
@@ -395,7 +384,7 @@ if (getEl('#evidenceForm')) {
         list.forEach(e => { const k = e.patrol_num || '—'; byPatrol[k] = (byPatrol[k] || 0) + 1; });
         
         const html = `<div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total registros</div></div>` +
-            Object.entries(byPatrol).map(([k, v]) => `<div class="stat-card"><div class="stat-value">${v}</div><div class="stat-label">Patrulla ${k}</div></div>`).join('');
+            Object.entries(byPatrol).map(([k, v]) => `<div class="stat-card"><div class="stat-value">${v}</div><div class="stat-label">Patrulla ${escapeHTML(k)}</div></div>`).join('');
         container.innerHTML = html;
     }
 
@@ -438,7 +427,7 @@ if (getEl('#evidenceForm')) {
                     <div class="evidence-header">
                         <div class="evidence-meta">
                             <span class="evidence-date">🕒 ${formatDate(e.timestamp)}</span>
-                            ${e.patrol_num ? `<span class="patrol-badge">Patrulla ${e.patrol_num}</span>` : ''}
+                            ${e.patrol_num ? `<span class="patrol-badge">Patrulla ${escapeHTML(e.patrol_num)}</span>` : ''}
                         </div>
                     </div>
                     <div class="evidence-text">${texto}</div>
